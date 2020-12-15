@@ -41,6 +41,9 @@ import Account from '~/components/Account.vue'
 
 export default Vue.extend({
   components: { Account },
+  mounted() {
+    this.$store.commit('accounts/getAccounts');
+  },
   computed: {
     assets() {
       return this.$store.state.accounts.assets
@@ -49,6 +52,7 @@ export default Vue.extend({
       return this.$store.state.accounts.liabilities
     }
   }
+
 
 })
 </script>
