@@ -8,4 +8,5 @@ class Account(Base):
     id = Column(Integer, primary_key=True)
     name= Column(String)
     balance= Column(Numeric(10, 2))
-    acc_type= Column(String)
+    account_type= Column(String)
+    account_name= Column(String)

@@ -1,12 +1,11 @@
 import models
+from models import Account
 import yfinance
+from sqlalchemy.orm import Session
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
-from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal, engine
 from pydantic import BaseModel
-from models import Account
-from sqlalchemy.orm import Session
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -24,10 +23,11 @@ app.add_middleware(
 models.Base.metadata.create_all(bind=engine)
 
 class AccountRequest(BaseModel):
-    id: int
-    name:str
     balance: int
-    acc_type: str
+    name: str
+    account_name: str
+    account_type: str
+
 
 def get_db():
     try:
@@ -115,7 +115,8 @@ async def create_account(account_request: AccountRequest, background_tasks: Back
     account = Account()
     account.name = account_request.name
     account.balance = account_request.balance
-    account.acc_type = account_request.acc_type
+    account.account_name = account_request.account_name
+    account.account_type = account_request.account_type
     db.add(account)
     db.commit()
 

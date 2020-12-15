@@ -6,7 +6,6 @@
         <div class="flex-fill"></div>
         <b-button variant="primary" v-b-modal.modal-1>Add</b-button>
       </b-row>
-      {{ assets }}
       <b-list-group v-for="asset in assets">
         <Account
           :accType="asset.account.name"
@@ -20,7 +19,6 @@
         <div class="flex-fill"></div>
         <b-button variant="primary" v-b-modal.modal-1>Add</b-button>
       </b-row>
-      {{ liabilities }}
       <b-list-group v-for="liability in liabilities">
         <Account
           acc-is-liability

@@ -4,7 +4,15 @@ export const state = () => ({
 })
 
 export const mutations = {
-  add(state, data) {
+  async add(state, data) {
+    const acc = {
+      account_type: data.account.type,
+      name: data.name,
+      account_name: data.account.name,
+      balance: data.balance
+    }
+    await this.$axios.post('/accounts', acc);
+
     if (data.account.type == 'liability') {
       state.liabilities.push(data)
     } else if (data.account.type == 'asset') {
@@ -13,9 +21,12 @@ export const mutations = {
   },
   async getAccounts(state) {
     let res = await this.$axios.get('/accounts')
-    console.log(res.data.accounts)
     res.data.accounts.forEach((account) => {
-      state.assets.push(account);
+      state.assets.push({
+        name: account.name,
+        account: {name: account.account_name, type: account.account_type},
+        balance: account.balance
+      });
     })
   }
   // remove(state, { todo }) {
@@ -23,6 +34,4 @@ export const mutations = {
   // }
 }
 
-export const actions = {
-
-}
+export const actions = {}
