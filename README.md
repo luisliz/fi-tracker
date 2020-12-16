@@ -1,12 +1,13 @@
 # Financial Freedom Tracker
 An app for a very keeping track of your finances. From investments, to acounts to expenses. Track your way to financial Independence
 
-**warning: This is a work in progress and is just being written with the intention of doing it as fast as possible as a weekend challenge**
+**warning**: This is a work in progress and is just being written with the intention of doing it as fast as possible as a weekend challenge
 
-### Done 
-- [x] Add Accounts with balance
-- [x] Add Incomes
-- [x] Add Budget entries and categories
+**P.D.** It's my first time using NuxtJS and FastAPI. Any improvements are welcome.
+### Technologies
+- NuxtJS
+- FastAPI
+- SQLAlchemy
 
 ### Future Improvments 
 - [ ]  Moving api calls to separate files
@@ -17,6 +18,12 @@ An app for a very keeping track of your finances. From investments, to acounts t
 - [ ]  User login (not priority)
 - [ ]  Some type of auto budget feature
 - [ ] "Should I purchase this?" area
+
+### Done 
+- [x] Add Accounts with balance
+- [x] Add Incomes
+- [x] Add Budget entries and categories
+
 ## API Build 
 ```
 ./run
