@@ -1,5 +1,9 @@
 import models
-from models import Account
+import uvicorn
+from datetime import datetime
+from models import AccountType, IncomeTypes, InvestmentTypes, ExpenseTypes, BudgetCategories, \
+  Account, Investments, Expenses, Budget, Income
+
 import yfinance
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
@@ -9,9 +13,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-origins = [
-  "http://localhost:3000"
-]
+origins = ["http://localhost:3000"]
 
 app.add_middleware(
   CORSMiddleware,
@@ -20,56 +22,115 @@ app.add_middleware(
   allow_methods=["*"],
   allow_headers=["*"],
 )
+
 models.Base.metadata.create_all(bind=engine)
 
+
+class BudgetCategoriesRequest(BaseModel):
+  name: str
+
+
+class AccountTypeRequest(BaseModel):
+  name: str
+  type: str
+
+
+class InvestmentTypeRequest(BaseModel):
+  name: str
+
+
+class ExpenseTypeRequest(BaseModel):
+  name: str
+
+
+class IncomeTypeRequest(BaseModel):
+  name: str
+
+
+class IncomeTypeRequest(BaseModel):
+  name: str
+
+
 class AccountRequest(BaseModel):
-    balance: int
-    name: str
-    account_name: str
-    account_type: str
+  name: str
+  balance: float
+  account_type_id: int
+
+
+class ExpensesRequest(BaseModel):
+  amount: float
+  expense_date: datetime
+  paid_to: str
+  budget_category_id: int
+  account_type_id: int
+
+
+class InvestmentsRequest(BaseModel):
+  ticker: str
+  shares: int
+  price_per_share: float
+  date: datetime
+  investment_type_id: int
+
+
+class IncomeRequest(BaseModel):
+  source: str
+  amount: float
+  income_date: datetime
+  taxes: float
+  saved: float
+  income_type_id: int
+  account_type_id: int
+
+
+class BudgetRequest(BaseModel):
+  name: str
+  amount: float
+  category_id: int
+  importance: str
 
 
 def get_db():
-    try:
-        db = SessionLocal()
-        yield db
-    finally:
-        db.close()
+  try:
+    db = SessionLocal()
+    yield db
+  finally:
+    db.close()
 
 
 @app.get("/")
-def home(request: Request, forward_pe = None, dividend_yield = None, ma50 = None, ma200 = None, db: Session = Depends(get_db)):
-    """
-    show all stocks in the database and button to add more
-    button next to each stock to delete from database
-    filters to filter this list of stocks
-    button next to each to add a note or save for later
-    """
+def home(request: Request, forward_pe=None, dividend_yield=None, ma50=None, ma200=None, db: Session = Depends(get_db)):
+  """
+  show all stocks in the database and button to add more
+  button next to each stock to delete from database
+  filters to filter this list of stocks
+  button next to each to add a note or save for later
+  """
 
-    stocks = db.query(Stock)
+  stocks = db.query(Stock)
 
-    if forward_pe:
-        stocks = stocks.filter(Stock.forward_pe < forward_pe)
+  if forward_pe:
+    stocks = stocks.filter(Stock.forward_pe < forward_pe)
 
-    if dividend_yield:
-        stocks = stocks.filter(Stock.dividend_yield > dividend_yield)
+  if dividend_yield:
+    stocks = stocks.filter(Stock.dividend_yield > dividend_yield)
 
-    if ma50:
-        stocks = stocks.filter(Stock.price > Stock.ma50)
+  if ma50:
+    stocks = stocks.filter(Stock.price > Stock.ma50)
 
-    if ma200:
-        stocks = stocks.filter(Stock.price > Stock.ma200)
+  if ma200:
+    stocks = stocks.filter(Stock.price > Stock.ma200)
 
-    stocks = stocks.all()
+  stocks = stocks.all()
 
-    return templates.TemplateResponse("home.html", {
-        "request": request,
-        "stocks": stocks,
-        "dividend_yield": dividend_yield,
-        "forward_pe": forward_pe,
-        "ma200": ma200,
-        "ma50": ma50
-    })
+  return templates.TemplateResponse("home.html", {
+    "request": request,
+    "stocks": stocks,
+    "dividend_yield": dividend_yield,
+    "forward_pe": forward_pe,
+    "ma200": ma200,
+    "ma50": ma50
+  })
 
 
 # def fetch_stock_data(id: int):
@@ -90,39 +151,266 @@ def home(request: Request, forward_pe = None, dividend_yield = None, ma50 = None
 #     db.add(stock)
 #     db.commit()
 
-@app.get("/accounts")
-async def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """
-    add one or more tickers to the database
-    background task to use yfinance and load key statistics
-    """
+# Budget category
+@app.get("/budget/category")
+def budget_categories(db: Session = Depends(get_db)):
+  budget_categories = db.query(BudgetCategories).all()
 
-    account = db.query(Account)
-    accounts = account.all()
+  return {
+    "code": "success",
+    "budget_categories": budget_categories
+  }
 
-    return {
-        "code": "success",
-        "accounts": accounts
+
+@app.post("/budget/category")
+def add_budget_category(budget_category_request: BudgetCategoriesRequest, db: Session = Depends(get_db)):
+  category = BudgetCategories()
+  category.name = budget_category_request.name
+
+  db.add(category)
+  db.commit()
+
+  return {
+    "code": "success",
+    "message": "budget category was added to the database"
+  }
+
+
+# get all budget
+@app.get("/budget")
+def get_budget(db: Session = Depends(get_db)):
+  entries = db.query(Budget, BudgetCategories).filter(Budget.category_id == BudgetCategories.id).all()
+
+  reformat = []
+  for entry in entries:
+    new_entry = {
+      'id': entry[0].id,
+      'name': entry[0].name,
+      'budget_amount': entry[0].amount,
+      'importance': entry[0].importance,
+      'category': entry[1].name
     }
+    reformat.append(new_entry)
+
+  return {
+    "code": "success",
+    "budget": reformat
+  }
+
+
+# add budget
+@app.post("/budget")
+def add_budget(budget_request: BudgetRequest, db: Session = Depends(get_db)):
+  print(budget_request)
+  budget_entry = Budget()
+  budget_entry.name = budget_request.name
+  budget_entry.amount = budget_request.amount
+  budget_entry.category_id = budget_request.category_id
+  budget_entry.importance = budget_request.importance
+
+  db.add(budget_entry)
+  db.commit()
+
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
+
+  return {
+    "code": "success",
+    "message": "budget entry was added to the database"
+  }
+
+
+@app.get("/investment/type")
+def get_investment_types(db: Session = Depends(get_db)):
+  investment_types = db.query(Investments).all()
+
+  return {
+    "code": "success",
+    "investment_types": investment_types
+  }
+
+
+@app.post("/investment/type")
+def add_investment_type(investment_type_request: InvestmentsRequest, db: Session = Depends(get_db)):
+  investmennt_type = InvestmentTypeRequest()
+  investmennt_type.ticker = investment_type_request.ticker
+  investmennt_type.shares = investment_type_request.shares
+  investmennt_type.price_per_share = investment_type_request.price_per_share
+  investmennt_type.date = investment_type_request.date
+  investmennt_type.investment_type_id = investment_type_request.investment_type_id
+
+  db.add(investmennt_type)
+  db.commit()
+
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
+
+  return {
+    "code": "success",
+    "message": "investment type was added to the database"
+  }
+
+
+# Income type category
+@app.get("/income/type")
+def get_income_types(db: Session = Depends(get_db)):
+  income_types = db.query(IncomeTypes).all()
+
+  return {
+    "code": "success",
+    "income_types": income_types
+  }
+
+
+@app.post("/income/type")
+def add_income_type(income_type_request: IncomeTypeRequest, db: Session = Depends(get_db)):
+  income_type = IncomeTypes()
+  income_type.name = account_request.name
+
+  db.add(income_type)
+  db.commit()
+
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
+
+  return {
+    "code": "success",
+    "message": "income type was added to the database"
+  }
+
+
+# Add Income
+@app.get("/income")
+def get_all_incomes(db: Session = Depends(get_db)):
+  incomes = db.query(Income).all()
+
+  return {
+    "code": "success",
+    "incomes": incomes
+  }
+
+
+# get all incomes
+@app.post("/income")
+def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
+  income = Income()
+  income.source = income_request.source
+  income.amount = income_request.amount
+  income.income_date = income_request.income_date
+  income.taxes = income_request.taxes
+  income.saved = income_request.saved
+  income.income_type_id = income_request.income_type_id
+  income.account_type_id = income_request.account_type_id
+
+  db.add(income)
+  db.commit()
+
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
+
+  return {
+    "code": "success",
+    "message": "income was added to the database"
+  }
+
+
+# Add Expense -> change this to budget types or none
+@app.get("/budget/expense")
+def get_all_expenses(db: Session = Depends(get_db)):
+  expenses = db.query(Expenses).all()
+
+  return {
+    "code": "success",
+    "expenses": expenses
+  }
+
+
+@app.post("/budget/expense")
+def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db)):
+  expense = Expenses()
+  account.amount = account_request.amount
+  account.expense_date = account_request.expense_date
+  account.paid_to = account_request.paid_to
+  expense.budget_category_id = expense_request.budget_category_id
+  expense.account_type_id = expense_request.account_type_id
+
+  db.add(expense)
+  db.commit()
+
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
+
+  return {
+    "code": "success",
+    "message": "expense was added to the database"
+  }
+
+
+@app.get("/accounts")
+def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+  accounts = db.query(Account, AccountType).filter(Account.account_type_id == AccountType.id).all()
+
+  reformat = {'assets': [], 'liabilities': []}
+  for account in accounts:
+    acc = {
+      'id': account[0].id,
+      'name': account[0].name,
+      'account': account[1],
+      'balance': account[0].starting_balance,
+    }
+
+    if (account[1].type == 'asset'):
+      reformat['assets'].append(acc)
+
+    if (account[1].type == 'liability'):
+      reformat['liabilities'].append(acc)
+
+
+  return {
+    "code": "success",
+    "accounts": reformat,
+  }
+
 
 @app.post("/accounts")
-async def create_account(account_request: AccountRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """
-    add one or more tickers to the database
-    background task to use yfinance and load key statistics
-    """
+def create_account(account_request: AccountRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+  account = Account()
+  account.name = account_request.name
+  account.starting_balance = account_request.balance
+  account.account_type_id = account_request.account_type_id
 
-    account = Account()
-    account.name = account_request.name
-    account.balance = account_request.balance
-    account.account_name = account_request.account_name
-    account.account_type = account_request.account_type
-    db.add(account)
-    db.commit()
+  db.add(account)
+  db.commit()
 
-#     background_tasks.add_task(fetch_stock_data, stock.id)
+  #     background_tasks.add_task(fetch_stock_data, stock.id)
 
-    return {
-        "code": "success",
-        "message": "stock was added to the database"
-    }
+  return {
+    "code": "success",
+    "message": "stock was added to the database"
+  }
+
+
+@app.get("/account_type")
+async def get_all_account_types(db: Session = Depends(get_db)):
+  account_type = db.query(AccountType)
+  accounts = account_type.all()
+
+  return {
+    "code": "success",
+    "account_types": accounts
+  }
+
+
+@app.post("/account_type")
+async def create_account_type(account_type_request: AccountTypeRequest, background_tasks: BackgroundTasks,
+                              db: Session = Depends(get_db)):
+  account_type = AccountType()
+  account_type.name = account_type_request.name
+  account_type.type = account_type_request.type
+
+  db.add(account_type)
+  db.commit()
+
+  return {
+    "code": "success",
+    "message": "Account Type was added to db"
+  }
+
+
+if __name__ == "__main__":
+  uvicorn.run(app, host="0.0.0.0", port=8000)
