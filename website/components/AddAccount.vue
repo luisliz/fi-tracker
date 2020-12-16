@@ -40,13 +40,19 @@
       </b-form-group>
       <b-button type="submit" variant="outline-success" block>Add</b-button>
     </b-form>
-    <pre>{{form}}</pre>
   </div>
 </template>
 <script lang="ts">
-import { mapMutations } from 'vuex'
+import Vue from 'vue'
+import { util } from 'prettier'
+import isNextLineEmptyAfterIndex = util.isNextLineEmptyAfterIndex
 
-export default {
+export default Vue.extend({
+  mounted() {
+    console.log('Loaded side')
+    this.getAccountTypes()
+
+  },
   data() {
     return {
       form: {
@@ -54,33 +60,41 @@ export default {
         name: '',
         account: null
       },
-      accountType: [
-        {
-          label: 'Assets',
-          options: [
-            { value: { name: 'bank', type: 'asset' }, text: 'Bank Account' },
-            { value: { name: 'broker', type: 'asset' }, text: 'Broker' },
-            { value: { name: 'mortgage', type: 'asset' }, text: 'Mortgage' }
-          ]
-        },
-        {
-          label: 'Liabilites',
-          options: [
-            { value: { name: 'loan', type: 'liability' }, text: 'Loan' },
-            { value: { name: 'carLoan', type: 'liability' }, text: 'Car Loan' },
-            { value: { name: 'creditCard', type: 'liability' }, text: 'Credit Card' },
-            { value: { name: 'studentLoan', type: 'liability' }, text: 'Student Loans' }
-          ]
-        }
-      ],
+      assets: [],
+      liabilities: [],
+      accountType: [],
       show: true
     }
   },
 
   methods: {
+    async getAccountTypes() { //This should be sa
+      let account_types = await this.$axios.$get('/account_type')
+      console.log(account_types.account_types)
+      let assets = []
+      let liabilities = []
+      account_types.account_types.forEach(acc => {
+        console.log(acc)
+        if (acc.type == 'asset')
+          assets.push({ value: acc.id, text: acc.name[0].toUpperCase() + acc.name.substr(1).toLowerCase() })
+        if (acc.type == 'liability')
+          liabilities.push({ value: acc.id, text: acc.name[0].toUpperCase() + acc.name.substr(1).toLowerCase() })
+      })
+      this.accountType = [
+        {
+          label: 'Assets',
+          options: assets
+        },
+        {
+          label: 'Liabilites',
+          options: liabilities
+        }
+      ]
+    },
     onSubmit(event) {
       event.preventDefault()
-      this.$store.commit('accounts/add', this.form)
+      this.$store.dispatch('accounts/addAccount', this.form)
+      this.$store.dispatch('accounts/getAccounts')
       this.$root.$emit('bv::hide::modal', 'modal-1')
     },
     onReset(event) {
@@ -96,7 +110,7 @@ export default {
       })
     }
   }
-}
+})
 </script>
 <style>
 .nuxtlogo {

@@ -17,55 +17,6 @@
         </b-col>
       </b-row>
     </b-list-group-item>
-    <!--    <b-card-->
-    <!--      class="mx-2"-->
-    <!--      border-variant="danger"-->
-    <!--      header-border-variant="danger"-->
-    <!--      header-text-variant="danger"-->
-    <!--    >-->
-    <!--      <template #header>-->
-    <!--        <div class="row">-->
-    <!--          <p class="mb-0">{{ accName }}</p>-->
-    <!--          <div class="flex-fill"></div>-->
-    <!--          <p class="mb-0">{{ accType }}</p>-->
-    <!--        </div>-->
-    <!--      </template>-->
-    <!--      <b-card-body>-->
-    <!--        <b-card-title>(${{amount}})</b-card-title>-->
-    <!--        <b-button-group size="lg">-->
-    <!--          <b-button variant="info">Edit</b-button>-->
-    <!--          <b-button variant="danger">Delete</b-button>-->
-    <!--        </b-button-group>-->
-    <!--      </b-card-body>-->
-    <!--    </b-card>-->
-<!--    <b-list-group>-->
-<!--      <b-list-group-item>Cras justo odio</b-list-group-item>-->
-<!--      <b-list-group-item>Dapibus ac facilisis in</b-list-group-item>-->
-<!--      <b-list-group-item>Morbi leo risus</b-list-group-item>-->
-<!--      <b-list-group-item>Porta ac consectetur ac</b-list-group-item>-->
-<!--      <b-list-group-item>Vestibulum at eros</b-list-group-item>-->
-<!--    </b-list-group>-->
-<!--    <b-card-->
-<!--      class="mx-2"-->
-<!--      border-variant="success"-->
-<!--      header-border-variant="success"-->
-<!--      header-text-variant="success"-->
-<!--    >-->
-<!--      <template #header>-->
-<!--        <div class="row">-->
-<!--          <p class="mb-0">{{ accName }}</p>-->
-<!--          <div class="flex-fill"></div>-->
-<!--          <p class="mb-0">{{ accType }}</p>-->
-<!--        </div>-->
-<!--      </template>-->
-<!--      <b-card-body>-->
-<!--        <b-card-title>${{ amount }}</b-card-title>-->
-<!--        <b-button-group size="lg">-->
-<!--          <b-button variant="info">Edit</b-button>-->
-<!--          <b-button variant="danger">Delete</b-button>-->
-<!--        </b-button-group>-->
-<!--      </b-card-body>-->
-<!--    </b-card>-->
 </template>
 <script lang="ts">
 export default {
