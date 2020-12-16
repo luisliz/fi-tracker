@@ -62,7 +62,7 @@ class ExpensesRequest(BaseModel):
   expense_date: datetime
   paid_to: str
   budget_category_id: int
-  account_type_id: int
+  account_id: int
 
 
 class InvestmentsRequest(BaseModel):
@@ -80,7 +80,7 @@ class IncomeRequest(BaseModel):
   taxes: float
   saved: float
   income_type_id: int
-  account_type_id: int
+  account_id: int
 
 
 class BudgetRequest(BaseModel):
@@ -263,7 +263,7 @@ def get_income_types(db: Session = Depends(get_db)):
 @app.post("/income/type")
 def add_income_type(income_type_request: IncomeTypeRequest, db: Session = Depends(get_db)):
   income_type = IncomeTypes()
-  income_type.name = account_request.name
+  income_type.name = income_type_request.name
 
   db.add(income_type)
   db.commit()
@@ -279,13 +279,25 @@ def add_income_type(income_type_request: IncomeTypeRequest, db: Session = Depend
 # Add Income
 @app.get("/income")
 def get_all_incomes(db: Session = Depends(get_db)):
-  incomes = db.query(Income).all()
+  incomes = db.query(Income, IncomeTypes, Account).filter(Income.income_type_id == IncomeTypes.id).filter(
+    Income.account_id == Account.id).all()
+
+  clean_incomes = []
+  for income in incomes:
+    clean_incomes.append({
+      'isActive': False,
+      '_showDetails': False,
+      'type': income[1].name,
+      'account_name': income[2].name,
+      'source': income[0].source,
+      'amount': income[0].amount,
+      'date': income[0].income_date
+    })
 
   return {
     "code": "success",
-    "incomes": incomes
+    "incomes": clean_incomes
   }
-
 
 # get all incomes
 @app.post("/income")
@@ -297,7 +309,7 @@ def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
   income.taxes = income_request.taxes
   income.saved = income_request.saved
   income.income_type_id = income_request.income_type_id
-  income.account_type_id = income_request.account_type_id
+  income.account_id = income_request.account_id
 
   db.add(income)
   db.commit()
@@ -309,7 +321,6 @@ def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
     "message": "income was added to the database"
   }
 
-
 # Add Expense -> change this to budget types or none
 @app.get("/budget/expense")
 def get_all_expenses(db: Session = Depends(get_db)):
@@ -320,7 +331,6 @@ def get_all_expenses(db: Session = Depends(get_db)):
     "expenses": expenses
   }
 
-
 @app.post("/budget/expense")
 def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db)):
   expense = Expenses()
@@ -328,7 +338,7 @@ def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db))
   account.expense_date = account_request.expense_date
   account.paid_to = account_request.paid_to
   expense.budget_category_id = expense_request.budget_category_id
-  expense.account_type_id = expense_request.account_type_id
+  expense.account_id = expense_request.account_id
 
   db.add(expense)
   db.commit()
@@ -339,7 +349,6 @@ def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db))
     "code": "success",
     "message": "expense was added to the database"
   }
-
 
 @app.get("/accounts")
 def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -360,12 +369,10 @@ def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if (account[1].type == 'liability'):
       reformat['liabilities'].append(acc)
 
-
   return {
     "code": "success",
     "accounts": reformat,
   }
-
 
 @app.post("/accounts")
 def create_account(account_request: AccountRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -384,7 +391,6 @@ def create_account(account_request: AccountRequest, background_tasks: Background
     "message": "stock was added to the database"
   }
 
-
 @app.get("/account_type")
 async def get_all_account_types(db: Session = Depends(get_db)):
   account_type = db.query(AccountType)
@@ -394,7 +400,6 @@ async def get_all_account_types(db: Session = Depends(get_db)):
     "code": "success",
     "account_types": accounts
   }
-
 
 @app.post("/account_type")
 async def create_account_type(account_type_request: AccountTypeRequest, background_tasks: BackgroundTasks,
@@ -410,7 +415,6 @@ async def create_account_type(account_type_request: AccountTypeRequest, backgrou
     "code": "success",
     "message": "Account Type was added to db"
   }
-
 
 if __name__ == "__main__":
   uvicorn.run(app, host="0.0.0.0", port=8000)

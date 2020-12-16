@@ -83,10 +83,10 @@ class Income(Base):
   taxes = Column(Numeric(10, 2))
   saved = Column(Numeric(10, 2))
   income_type_id = Column(Integer, ForeignKey(IncomeTypes.id))
-  account_type_id = Column(Integer, ForeignKey(AccountType.id))
+  account_id = Column(Integer, ForeignKey(Account.id))
   # saved_account_id = Column(Integer, ForeignKey(AccountType.id))
 
-  account_type = relationship('AccountType', foreign_keys='Income.account_type_id')
+  account = relationship('Account', foreign_keys='Income.account_id')
   income_type = relationship('IncomeTypes', foreign_keys='Income.income_type_id')
   # saved_account = relationship('IncomeTypes', foreign_keys='Income.saved_account_id')
 
