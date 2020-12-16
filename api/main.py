@@ -61,7 +61,7 @@ class ExpensesRequest(BaseModel):
   amount: float
   expense_date: datetime
   paid_to: str
-  budget_category_id: int
+  budget_entry_id: int
   account_id: int
 
 
@@ -324,20 +324,32 @@ def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
 # Add Expense -> change this to budget types or none
 @app.get("/budget/expense")
 def get_all_expenses(db: Session = Depends(get_db)):
-  expenses = db.query(Expenses).all()
+  expenses = db.query(Expenses, Account.name, Budget.name).all()
+
+  clean_expenses = []
+  for expense in expenses:
+    clean_expenses.append({
+      'isActive': False,
+      '_showDetails': False,
+      'from_account': expense[1],
+      'paid_to': expense[0].paid_to,
+      'expense_date': expense[0].expense_date,
+      'amount': expense[0].amount,
+      'budget_name': expense[2]
+    })
 
   return {
     "code": "success",
-    "expenses": expenses
+    "expenses": clean_expenses
   }
 
 @app.post("/budget/expense")
 def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db)):
   expense = Expenses()
-  account.amount = account_request.amount
-  account.expense_date = account_request.expense_date
-  account.paid_to = account_request.paid_to
-  expense.budget_category_id = expense_request.budget_category_id
+  expense.amount = expense_request.amount
+  expense.expense_date = expense_request.expense_date
+  expense.paid_to = expense_request.paid_to
+  expense.budget_entry_id = expense_request.budget_entry_id
   expense.account_id = expense_request.account_id
 
   db.add(expense)

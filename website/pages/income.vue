@@ -105,7 +105,8 @@ export default Vue.extend({
         income_id: null,
         account: null,
         amount: null,
-        source: ''
+        source: '',
+        date: null
       }
     }
   },
@@ -136,17 +137,17 @@ export default Vue.extend({
       this.items = res.incomes
     },
     async addIncome() {
+      const myDate =  this.$moment(new Date(this.form.date)).format("YYYY-MM-DD HH:mm:ss");
       const income = {
         'source': this.form.source,
         'amount': this.form.amount,
-        'income_date': '2020-12-16T18:02:07.208Z',
-        'taxes': 0,
-        'saved': 0,
+        'income_date': myDate,
+        'taxes': 0, // fix later
+        'saved': 0, // fix later
         'income_type_id': this.form.income_id,
         'account_id': this.form.account
       }
-      const res = await this.$axios.post('/income', income)
-     console.log(res)
+      await this.$axios.post('/income', income)
       this.getIncomes()
     },
     async getAccounts() {

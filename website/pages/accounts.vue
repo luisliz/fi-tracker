@@ -72,7 +72,7 @@
       </b-col>
 
     </b-row>
-    <h5>Categories</h5>
+    <h5>Account Types</h5>
     <b-list-group>
       <b-list-group-item v-for="account in account_types">
         <b-row>

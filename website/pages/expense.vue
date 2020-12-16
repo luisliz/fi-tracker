@@ -2,22 +2,22 @@
   <div>
     <div class="row">
       <div>
-        <b-form-datepicker id="example-datepicker" v-model="value" class="mb-2"></b-form-datepicker>
+        <b-form-datepicker id="example-datepicker" v-model="form.date" class="mb-2"></b-form-datepicker>
       </div>
       <div>
-        <b-form-select v-model="selectedexpense" :options="expenses"></b-form-select>
+        <b-form-select v-model="form.budget_id" :options="budget_categories"></b-form-select>
       </div>
       <div>
-        <b-form-select v-model="selectedaccount" :options="accounts"></b-form-select>
+        <b-form-select v-model="form.account_id" :options="accounts"></b-form-select>
       </div>
       <div>
-        <b-form-input placeholder="Store"></b-form-input>
+        <b-form-input v-model="form.paid_to" placeholder="Paid To"></b-form-input>
       </div>
       <div>
-        <b-form-input placeholder="Amount"></b-form-input>
+        <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
       </div>
       <div>
-        <b-button variant="primary">Add</b-button>
+        <b-button variant="primary" @click="addExpense">Add</b-button>
       </div>
     </div>
 
@@ -52,61 +52,72 @@
         </b-card>
       </template>
     </b-table>
+
   </div>
 </template>
 
 <script>
-export default {
+import Vue from 'vue'
+
+export default Vue.extend({
   data() {
     return {
-      selectedexpense: 'apartment',
-      expenses: [
-        'haircut',
-        'apartment',
-        'car',
-        'pets'
-      ],
-      selectedaccount: 'BPPR',
-      accounts: [
-        'BPPR',
-        'Chase',
-        'Discover'
-      ],
-      fields: ['type', 'account', 'amount', 'date', 'store', 'show_details'],
-      items: [
-        {
-          isActive: false,
-          _showDetails: false,
-          type: 'Apartment',
-          account: 'BPPR',
-          store: 'Apartments.com',
-          amount: '$5802',
-          date: '05/05/2020',
-          budget: '$50159',
-          year_average: '$4504',
-          annual: '5905',
-          savings: '0'
-        },
-        {
-          isActive: false,
-          _showDetails: false,
-          type: 'Car',
-          account: 'Discover',
-          store: 'CarDealersPR',
-          amount: '$5802',
-          date: '05/05/2020'
-        },
-        {
-          isActive: false,
-          _showDetails: false,
-          type: 'Internet',
-          account: 'Chase',
-          store: 'Liberty',
-          amount: '$5802',
-          date: '05/05/2020'
-        }
-      ]
+      form: {
+        date: null,
+        budget_id: null,
+        account_id: null,
+        paid_to: '',
+        amount: null
+      },
+      budget_categories: [],
+      expenses: [],
+      accounts: [],
+      fields: ['paid_to', 'from_account', 'amount', 'budget_name', 'expense_date', 'show_details'],
+      items: []
+    }
+  },
+  mounted() {
+    this.getAccounts()
+    this.getBudgetCategories()
+    this.getExpenses()
+  },
+  methods: {
+    async getAccounts() {
+      let res = await this.$axios.$get('/accounts')
+      const accounts = []
+      res.accounts.assets.forEach(acc => {
+        accounts.push({ value: acc.id, text: acc.name[0].toUpperCase() + acc.name.substr(1).toLowerCase() })
+      })
+      this.form.account_id = accounts[0].value
+      this.accounts = accounts
+    },
+    async getBudgetCategories() {
+      const categories = await this.$axios.$get('/budget/category')
+
+      let new_categories = []
+      categories.budget_categories.forEach((cat) => {
+        new_categories.push({ text: cat.name, value: cat.id })
+      })
+      this.budget_categories = new_categories
+      this.form.budget_id = new_categories[0].value
+    },
+    async getExpenses() {
+      const res = await this.$axios.$get('/budget/expense')
+      this.items = res.expenses
+    },
+    async addExpense() {
+      const myDate = this.$moment(new Date(this.form.date)).format('YYYY-MM-DD HH:mm:ss')
+      const expense = {
+        'amount': this.form.amount,
+        'expense_date': myDate,
+        'paid_to': this.form.paid_to,
+        'budget_entry_id': this.form.budget_id,
+        'account_id': this.form.account_id
+      }
+      await this.$axios.post('/budget/expense', expense)
+      this.getExpenses()
     }
   }
-}
+
+})
 </script>

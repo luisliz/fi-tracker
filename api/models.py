@@ -2,6 +2,7 @@ from database import Base
 from sqlalchemy import Column, ForeignKey, Numeric, Integer, String, TIMESTAMP, Enum
 from sqlalchemy.orm import relationship
 
+
 # -------------------------------------------------------------------------------------------------
 # Type Tables
 # -------------------------------------------------------------------------------------------------
@@ -49,19 +50,6 @@ class Account(Base):
   account = relationship(AccountType, backref='types')
 
 
-class Expenses(Base):
-  __tablename__ = "expenses"
-  id = Column(Integer, primary_key=True)
-  amount = Column(Numeric(10, 2))
-  expense_date = Column(TIMESTAMP)
-  paid_to = Column(String)
-  budget_category_id = Column(Integer, ForeignKey(BudgetCategories.id), nullable=True)  # null for other
-  account_type_id = Column(Integer, ForeignKey(AccountType.id))
-
-  budget_category = relationship(BudgetCategories)
-  account_type = relationship(AccountType)
-
-
 class Investments(Base):
   __tablename__ = "investments"
   id = Column(Integer, primary_key=True)
@@ -99,4 +87,17 @@ class Budget(Base):
   importance = Column(Enum("essential", "discretionary", "excess", name="budget_importance_enum"))
   category_id = Column(Integer, ForeignKey(BudgetCategories.id))
 
-  account_type = relationship('BudgetCategories', foreign_keys='Budget.category_id')
+  account_type = relationship(BudgetCategories)
+
+
+class Expenses(Base):
+  __tablename__ = "expenses"
+  id = Column(Integer, primary_key=True)
+  amount = Column(Numeric(10, 2))
+  expense_date = Column(TIMESTAMP)
+  paid_to = Column(String)
+  budget_entry_id = Column(Integer, ForeignKey(Budget.id), nullable=True)  # null for other
+  account_id = Column(Integer, ForeignKey(Account.id))
+
+  budget_category = relationship(Budget)
+  account_type = relationship(Account)
