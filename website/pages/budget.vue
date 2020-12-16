@@ -37,7 +37,7 @@
             <b-form-input
               id="input-1"
               type="text"
-              v-model="newBudgetCategory" addBudgetCategory
+              v-model="newBudgetCategory"
               placeholder="Enter new category"
               required
             ></b-form-input>
