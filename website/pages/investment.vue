@@ -4,47 +4,66 @@
       <div>
         <b-form-datepicker
           id="example-datepicker"
-          v-model="value"
+          v-model="form.date"
           class="mb-2"
         ></b-form-datepicker>
       </div>
       <div>
-        <b-form-input placeholder="Ticker"></b-form-input>
+        <b-form-input v-model="form.ticker" placeholder="Ticker"></b-form-input>
       </div>
       <div>
-        <b-form-input placeholder="# of Shares"></b-form-input>
+        <b-form-input v-model="form.shares" placeholder="# of Shares"></b-form-input>
       </div>
       <div>
         <b-form-select
-          v-model="selectedaccount"
+          v-model="form.account_id"
           :options="accounts"
         ></b-form-select>
       </div>
       <div>
-        <b-form-input placeholder="Cost Basis"></b-form-input>
+        <b-form-input v-model="form.price_per_share" placeholder="Cost Basis"></b-form-input>
       </div>
       <div>
         <b-form-select
-          v-model="selectedcategories"
-          :options="categories"
+          v-model="form.type_id"
+          :options="investmentTypes"
         ></b-form-select>
       </div>
       <div>
-        <b-button variant="primary">Add</b-button>
+        <b-button variant="primary" @click="addInvestment">Add</b-button>
       </div>
     </div>
     <div class="row">
       <div class="col-4">
-        <b-table
-          hover
-          :items="summary"
-          :fields="categories"
-          striped
-          responsive="sm"
-        ></b-table>
-      </div>
-      <div class="col-4">
-        <DoughnutChart />
+<!--        <b-table-->
+<!--          hover-->
+<!--          :items="summary"-->
+<!--          :fields="categories"-->
+<!--          striped-->
+<!--          responsive="sm"-->
+<!--        ></b-table>-->
+        <h5>Investment Types</h5>
+        <b-list-group>
+          <b-list-group-item v-for="invest_type in investmentTypes">
+            <b-row>
+              <b-col>
+                {{ invest_type.text }}
+              </b-col>
+            </b-row>
+          </b-list-group-item>
+          <b-list-group-item>
+            <b-form inline>
+              <b-form-input
+                id="input-1"
+                type="text"
+                v-model="new_investment_type"
+                placeholder="Enter new category"
+                required
+              ></b-form-input>
+              <b-button @click="addInvestmentType">Add</b-button>
+            </b-form>
+          </b-list-group-item>
+        </b-list-group>
       </div>
       <div class="col-4">
         <DoughnutChart />
@@ -85,18 +104,19 @@
 </template>
 
 <script>
+import Vue from 'vue'
 import DoughnutChart from '~/components/DoughnutChart'
 import StackedAreaChart from '~/components/StackedAreaChart'
 import StackedLineChart from '~/components/StackedLineChart'
 
-export default {
+export default Vue.extend({
   components: { StackedLineChart, StackedAreaChart, DoughnutChart },
   data() {
     return {
-      selectedcategories: 'ETF',
+      // selectedcategories: 'ETF',
       categories: ['etf', 'stock', 'crypto', 'bonds'],
-      selectedaccount: 'TDA',
-      accounts: ['TDA', 'Vanguard'],
+      // selectedaccount: 'TDA',
+      accounts: [],
       summary: [
         { etf: '40%', stock: '50%', crypto: '0%', bonds: '10%' },
         {
@@ -109,13 +129,12 @@ export default {
       fields: [
         'category',
         'ticker',
-        'valuePerShare',
+        'cost_basis',
         'shares',
         'value_change',
         'prev_year_dividend	',
         'estDividend',
         'actual_allocation',
-        'target_allocation'
       ],
       items: [
         {
@@ -158,11 +177,68 @@ export default {
           etf_l_l: '+500',
           stock_p_l: '-5000'
         }
-      ]
-
+      ],
+      form: {
+        account_id: null,
+        ticker: '',
+        shares: '',
+        type_id: null,
+        price_per_share: null,
+        date: null
+      },
+      investmentTypes: [],
+      new_investment_type: ''
+    }
+  },
+  mounted() {
+    this.getAccounts()
+    this.getInvestmentTypes()
+    this.getInvestments()
+  },
+  methods: {
+    async getAccounts() {
+      let res = await this.$axios.$get('/accounts')
+      const accounts = []
+      res.accounts.assets.forEach(acc => {
+        accounts.push({ value: acc.id, text: acc.name[0].toUpperCase() + acc.name.substr(1).toLowerCase() })
+      })
+      this.form.account_id = accounts[0].value
+      this.accounts = accounts
+    },
+    async getInvestmentTypes() {
+      let res = await this.$axios.$get('/investment/type')
+      const investmentTypes = []
+      res.investment_types.forEach(type => {
+        investmentTypes.push({ value: type.id, text: type.name})
+      })
+      this.form.type_id = investmentTypes[0].value
+      this.investmentTypes = investmentTypes
+    },
+    async getInvestments() {
+      let res = await this.$axios.$get('/investment')
+      this.items=res.investments
+    },
+    async addInvestmentType() {
+      await this.$axios.post('/investment/type', { name: this.new_investment_type })
+      this.new_investment_type = ''
+      this.getInvestmentTypes()
+    },
+    async addInvestment() {
+      const myDate = this.$moment(new Date(this.form.date)).format('YYYY-MM-DD HH:mm:ss')
+      const investment = {
+        'investment_type_id': this.form.type_id,
+        'ticker': this.form.ticker,
+        'shares': this.form.shares,
+        'price_per_share': this.form.price_per_share,
+        'date': myDate,
+        'investment_account_id': this.form.account_id
+      }
+      console.log(investment)
+      await this.$axios.post('/investment', investment)
+      this.getInvestments()
     }
   }
-}
+})
 </script>
 <style>
 @keyframes appear {

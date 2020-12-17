@@ -54,11 +54,13 @@ class Investments(Base):
   __tablename__ = "investments"
   id = Column(Integer, primary_key=True)
   ticker = Column(String)
-  shares = Column(Numeric(10, 2))
+  shares = Column(Integer)
   price_per_share = Column(Numeric(10, 2))
   date = Column(TIMESTAMP)
-  investment_type_id = Column(Integer, ForeignKey(InvestmentTypes.id), nullable=True)
+  investment_account_id = Column(Integer, ForeignKey(Account.id))
+  investment_type_id = Column(Integer, ForeignKey(InvestmentTypes.id))
 
+  investment_account = relationship('Account', foreign_keys='Investments.investment_account_id')
   investment_type = relationship('InvestmentTypes', foreign_keys='Investments.investment_type_id')
 
 

@@ -1,5 +1,8 @@
 import models
+import re
+import json
 import uvicorn
+import pandas as pd
 from datetime import datetime
 from models import AccountType, IncomeTypes, InvestmentTypes, ExpenseTypes, BudgetCategories, \
   Account, Investments, Expenses, Budget, Income
@@ -47,10 +50,6 @@ class IncomeTypeRequest(BaseModel):
   name: str
 
 
-class IncomeTypeRequest(BaseModel):
-  name: str
-
-
 class AccountRequest(BaseModel):
   name: str
   balance: float
@@ -66,11 +65,12 @@ class ExpensesRequest(BaseModel):
 
 
 class InvestmentsRequest(BaseModel):
+  investment_type_id: int
   ticker: str
   shares: int
   price_per_share: float
   date: datetime
-  investment_type_id: int
+  investment_account_id: int
 
 
 class IncomeRequest(BaseModel):
@@ -221,33 +221,90 @@ def add_budget(budget_request: BudgetRequest, db: Session = Depends(get_db)):
 
 @app.get("/investment/type")
 def get_investment_types(db: Session = Depends(get_db)):
-  investment_types = db.query(Investments).all()
+  investment_types = db.query(InvestmentTypes).all()
 
   return {
     "code": "success",
     "investment_types": investment_types
   }
 
+@app.post("/investment")
+def add_investment_type(investment_request: InvestmentsRequest, db: Session = Depends(get_db)):
+  investment  = Investments()
+  investment.investment_type_id = investment_request.investment_type_id
+  investment.ticker = investment_request.ticker
+  investment.shares = investment_request.shares
+  investment.price_per_share = investment_request.price_per_share
+  investment.date = investment_request.date
+  investment.investment_account_id = investment_request.investment_account_id
 
-@app.post("/investment/type")
-def add_investment_type(investment_type_request: InvestmentsRequest, db: Session = Depends(get_db)):
-  investmennt_type = InvestmentTypeRequest()
-  investmennt_type.ticker = investment_type_request.ticker
-  investmennt_type.shares = investment_type_request.shares
-  investmennt_type.price_per_share = investment_type_request.price_per_share
-  investmennt_type.date = investment_type_request.date
-  investmennt_type.investment_type_id = investment_type_request.investment_type_id
-
-  db.add(investmennt_type)
+  db.add(investment)
   db.commit()
 
-  #     background_tasks.add_task(fetch_stock_data, stock.id)
+  return {
+    "code": "success",
+    "message": "investment was added to the database"
+  }
+
+
+# Income type category
+@app.get("/investment")
+def get_income_types(db: Session = Depends(get_db)):
+  def wavg(group):
+    d = group['price_per_share']
+    w = group['shares']
+    return (d * w).sum() / w.sum()
+
+  tickers = pd.read_sql_table('investments', db.bind).groupby('ticker')
+  stocks = pd.concat([tickers.apply(wavg).reset_index(), tickers['shares'].sum().reset_index()], axis=1)
+  stocks.rename(columns={0: 'cost_basis'}, inplace=True)
+  stocks = stocks.loc[:, ~stocks.columns.duplicated()]
+
+  # test = stocks.apply(lambda x: x.to_json(), axis=0)
+  stocks['json'] = stocks.to_json(orient='split')
+
+  invalid_escape = re.compile(r'\\([1-3][0-7]{2}|[1-7][0-7]?)')  # octal digits from 1 up to FF
+
+  def replace_with_codepoint(match):
+    return chr(int(match.group(0)[1:], 8))
+
+  def repair(brokenjson):
+    return invalid_escape.sub(replace_with_codepoint, brokenjson)
+
+  clean_json = json.loads(repair(stocks['json'][0]))['data']
+  result = []
+  for stock in clean_json:
+    result.append({
+    'investment_type': 0,  # join
+    'ticker': stock[0], # group by
+    'shares': stock[2], # sum total
+    'cost_basis': stock[1], # weighted
+    'actual_allocation': 0, # total portfolio / (price_per_share)
+    'value_change': 0, # yfinance
+    'value_per_share' : 0,# get from y finance
+    'prev_year_dividend': 0, # yfinance
+    'est_total_dividend': 0 # yfinance
+    })
+
+  return {
+    "code": "success",
+    "investments": result
+    # "summary": summary
+  }
+
+
+@app.post("/investment/type")
+def add_investment_type(investment_type_request: InvestmentTypeRequest, db: Session = Depends(get_db)):
+  investment_type = InvestmentTypes()
+  investment_type.name = investment_type_request.name
+
+  db.add(investment_type)
+  db.commit()
 
   return {
     "code": "success",
     "message": "investment type was added to the database"
   }
-
 
 # Income type category
 @app.get("/income/type")
@@ -299,6 +356,7 @@ def get_all_incomes(db: Session = Depends(get_db)):
     "incomes": clean_incomes
   }
 
+
 # get all incomes
 @app.post("/income")
 def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
@@ -320,6 +378,7 @@ def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
     "code": "success",
     "message": "income was added to the database"
   }
+
 
 # Add Expense -> change this to budget types or none
 @app.get("/budget/expense")
@@ -343,6 +402,7 @@ def get_all_expenses(db: Session = Depends(get_db)):
     "expenses": clean_expenses
   }
 
+
 @app.post("/budget/expense")
 def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db)):
   expense = Expenses()
@@ -361,6 +421,7 @@ def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db))
     "code": "success",
     "message": "expense was added to the database"
   }
+
 
 @app.get("/accounts")
 def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -386,6 +447,7 @@ def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     "accounts": reformat,
   }
 
+
 @app.post("/accounts")
 def create_account(account_request: AccountRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
   account = Account()
@@ -403,6 +465,7 @@ def create_account(account_request: AccountRequest, background_tasks: Background
     "message": "stock was added to the database"
   }
 
+
 @app.get("/account_type")
 async def get_all_account_types(db: Session = Depends(get_db)):
   account_type = db.query(AccountType)
@@ -412,6 +475,7 @@ async def get_all_account_types(db: Session = Depends(get_db)):
     "code": "success",
     "account_types": accounts
   }
+
 
 @app.post("/account_type")
 async def create_account_type(account_type_request: AccountTypeRequest, background_tasks: BackgroundTasks,
@@ -427,6 +491,7 @@ async def create_account_type(account_type_request: AccountTypeRequest, backgrou
     "code": "success",
     "message": "Account Type was added to db"
   }
+
 
 if __name__ == "__main__":
   uvicorn.run(app, host="0.0.0.0", port=8000)

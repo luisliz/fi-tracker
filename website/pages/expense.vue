@@ -72,7 +72,7 @@ export default Vue.extend({
       budget_categories: [],
       expenses: [],
       accounts: [],
-      fields: ['paid_to', 'from_account', 'amount', 'budget_name', 'expense_date', 'show_details'],
+      fields: ['expense_date', 'budget_name', 'paid_to', 'from_account', 'amount', 'show_details'],
       items: []
     }
   },
