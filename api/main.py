@@ -9,6 +9,7 @@ from models import AccountType, IncomeTypes, InvestmentTypes, ExpenseTypes, Budg
 
 from yahooquery import Ticker
 from yahoofinancials import YahooFinancials
+from yahoo_finance import Share
 import yfinance
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
@@ -282,38 +283,40 @@ def get_income_types(db: Session = Depends(get_db)):
   result = []
 
   for stock in clean_json:
+
     shares = stock[3]
     ticker = stock[1]
     cost_basis = stock[2]
+    fin = Ticker(stock).summary_detail
     res = {
-      'investment_type': stock[0],  # join
-      'ticker': ticker,  # group by
-      'shares': shares,  # sum total
-      'cost_basis': cost_basis,  # weighted
-      # 'value_per_share': close[stock],  # get from y finance
-
-      # 'value_per_share': 0,  # get from y finance
-      # 'value_change': 0,  # yfinance
-      # 'prev_year_dividend': 0,  # yfinance
-      # 'est_total_dividend': 0,  # yfinance
-      # 'logo': '',
-
-      'actual_allocation': 0,  # total portfolio / (price_per_share)
-    }
-
-    try:
-      fin = yfinance.Ticker(stock)
-      print("BREUH", fin.ticker)
-      print('')
-    except:
-      print("BRUHH BADDD")
-    # if(fin['previousClose']):
-    # res['value_change'] = fin['previousClose'] - cost_basis,  # yfinance
-    # res['prev_year_dividend'] = fin['lastDividendValue'],  # yfinance
-    # res['est_total_dividend'] = fin['dividendRate'] * shares,  # yfinance
-    # res['logo'] = fin['logo_url'],
-
+          'investment_type': stock[0],  # join
+          'ticker': ticker,  # group by
+          'shares': shares,  # sum total
+          'cost_basis': cost_basis,  # weighted
+          'value_per_share': fin['previousClose'],  # get from y finance
+          'value_change': fin['previousClose'] - cost_basis,  # yfinance
+          'prev_year_dividend': fin['trailingAnnualDividendRate'],  # yfinance
+          'est_total_dividend': fin['dividendRate'] * shares,  # yfinance
+          #res['logo'] = fin['logo_url'],
+    
+    
+          'actual_allocation': 0,  # total portfolio / (price_per_share)
+        }
     result.append(res)
+    #res = {
+    #  'investment_type': stock[0],  # join
+    #  'ticker': ticker,  # group by
+    #  'shares': shares,  # sum total
+    #  'cost_basis': cost_basis,  # weighted
+    #  #'value_per_share': fin['previousClose'],  # get from y finance
+    #  #'value_change': fin['previousClose'] - cost_basis,  # yfinance
+    #  #'prev_year_dividend': fin['trailingAnnualDividendRate'],  # yfinance
+    #  #'est_total_dividend': fin['dividendRate'] * shares,  # yfinance
+    #  #res['logo'] = fin['logo_url'],
+
+
+    #  'actual_allocation': 0,  # total portfolio / (price_per_share)
+    #}
 
   return {
     "code": "success",
