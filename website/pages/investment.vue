@@ -127,13 +127,14 @@ export default Vue.extend({
         }
       ],
       fields: [
-        'category',
+        'investment_type',
         'ticker',
-        'cost_basis',
         'shares',
+        'value_per_share',
         'value_change',
+        'cost_basis',
         'prev_year_dividend	',
-        'estDividend',
+        'est_total_dividend',
         'actual_allocation',
       ],
       items: [
