@@ -7,6 +7,8 @@ from datetime import datetime
 from models import AccountType, IncomeTypes, InvestmentTypes, ExpenseTypes, BudgetCategories, \
   Account, Investments, Expenses, Budget, Income
 
+from yahooquery import Ticker
+from yahoofinancials import YahooFinancials
 import yfinance
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
@@ -228,9 +230,10 @@ def get_investment_types(db: Session = Depends(get_db)):
     "investment_types": investment_types
   }
 
+
 @app.post("/investment")
 def add_investment_type(investment_request: InvestmentsRequest, db: Session = Depends(get_db)):
-  investment  = Investments()
+  investment = Investments()
   investment.investment_type_id = investment_request.investment_type_id
   investment.ticker = investment_request.ticker
   investment.shares = investment_request.shares
@@ -255,12 +258,16 @@ def get_income_types(db: Session = Depends(get_db)):
     w = group['shares']
     return (d * w).sum() / w.sum()
 
-  tickers = pd.read_sql_table('investments', db.bind).groupby('ticker')
+  query = db.query(Investments, InvestmentTypes)
+  data = pd.read_sql(query.statement, db.bind)
+  ticker_list = pd.DataFrame(data)['ticker'].drop_duplicates().values.tolist()
+  tickers = data.groupby(['name', 'ticker'])
   stocks = pd.concat([tickers.apply(wavg).reset_index(), tickers['shares'].sum().reset_index()], axis=1)
   stocks.rename(columns={0: 'cost_basis'}, inplace=True)
+  stocks.rename(columns={'name': 'investment_type'}, inplace=True)
   stocks = stocks.loc[:, ~stocks.columns.duplicated()]
 
-  # test = stocks.apply(lambda x: x.to_json(), axis=0)
+
   stocks['json'] = stocks.to_json(orient='split')
 
   invalid_escape = re.compile(r'\\([1-3][0-7]{2}|[1-7][0-7]?)')  # octal digits from 1 up to FF
@@ -273,18 +280,40 @@ def get_income_types(db: Session = Depends(get_db)):
 
   clean_json = json.loads(repair(stocks['json'][0]))['data']
   result = []
+
   for stock in clean_json:
-    result.append({
-    'investment_type': 0,  # join
-    'ticker': stock[0], # group by
-    'shares': stock[2], # sum total
-    'cost_basis': stock[1], # weighted
-    'actual_allocation': 0, # total portfolio / (price_per_share)
-    'value_change': 0, # yfinance
-    'value_per_share' : 0,# get from y finance
-    'prev_year_dividend': 0, # yfinance
-    'est_total_dividend': 0 # yfinance
-    })
+    shares = stock[3]
+    ticker = stock[1]
+    cost_basis = stock[2]
+    res = {
+      'investment_type': stock[0],  # join
+      'ticker': ticker,  # group by
+      'shares': shares,  # sum total
+      'cost_basis': cost_basis,  # weighted
+      # 'value_per_share': close[stock],  # get from y finance
+
+      # 'value_per_share': 0,  # get from y finance
+      # 'value_change': 0,  # yfinance
+      # 'prev_year_dividend': 0,  # yfinance
+      # 'est_total_dividend': 0,  # yfinance
+      # 'logo': '',
+
+      'actual_allocation': 0,  # total portfolio / (price_per_share)
+    }
+
+    try:
+      fin = yfinance.Ticker(stock)
+      print("BREUH", fin.ticker)
+      print('')
+    except:
+      print("BRUHH BADDD")
+    # if(fin['previousClose']):
+    # res['value_change'] = fin['previousClose'] - cost_basis,  # yfinance
+    # res['prev_year_dividend'] = fin['lastDividendValue'],  # yfinance
+    # res['est_total_dividend'] = fin['dividendRate'] * shares,  # yfinance
+    # res['logo'] = fin['logo_url'],
+
+    result.append(res)
 
   return {
     "code": "success",
@@ -305,6 +334,7 @@ def add_investment_type(investment_type_request: InvestmentTypeRequest, db: Sess
     "code": "success",
     "message": "investment type was added to the database"
   }
+
 
 # Income type category
 @app.get("/income/type")
