@@ -261,19 +261,31 @@ def get_income_types(db: Session = Depends(get_db)):
   query = db.query(Investments, InvestmentTypes).filter(Investments.investment_type_id == InvestmentTypes.id)
   data = pd.read_sql(query.statement, db.bind)
 
-  tickers = data.groupby(['name', 'ticker'])
+  # tickers = data.groupby(['name', 'ticker'])
+  # stocks = pd.concat([tickers.apply(wavg).reset_index(), tickers['shares'].sum().reset_index()], axis=1)
+  # stocks.rename(columns={0: 'cost_basis'}, inplace=True)
+  # stocks.rename(columns={'name': 'investment_type'}, inplace=True)
+  # stocks = stocks.loc[:, ~stocks.columns.duplicated()]
+  # stocks['total'] = stocks.shares * stocks.cost_basis
+
+  tickers = pd.DataFrame(data).groupby(['ticker'])
   stocks = pd.concat([tickers.apply(wavg).reset_index(), tickers['shares'].sum().reset_index()], axis=1)
-  stocks.rename(columns={0: 'cost_basis'}, inplace=True)
-  stocks.rename(columns={'name': 'investment_type'}, inplace=True)
+  stocks.rename(columns={0: 'cost_basis', 'name': 'investment_type'}, inplace=True)
   stocks = stocks.loc[:, ~stocks.columns.duplicated()]
+
   stocks['total'] = stocks.shares * stocks.cost_basis
-  stocks['percent'] = stocks.iloc[:, 4:].apply(lambda x: x / x.sum())
+  stocks['percent'] = stocks.iloc[:, 3:].apply(lambda x: x / x.sum())
+
+  ticker_data = Ticker(stocks['ticker'].to_list()).summary_detail
+  stocks_data = pd.DataFrame(ticker_data).T[['previousClose', 'dividendRate', 'trailingAnnualDividendRate']]
+  stocks_data.index.name = 'ticker'
+  stock_w_data = pd.merge(stocks_data, stocks, on='ticker')
 
   weight = stocks[['ticker', 'percent']]
   weight = weight.loc[:, ~weight.columns.duplicated()]
   weight_json = weight.to_json(orient='split')
 
-  stocks['json'] = stocks.to_json(orient='split')
+  stock_w_data['json'] = stock_w_data.to_json(orient='split')
 
   invalid_escape = re.compile(r'\\([1-3][0-7]{2}|[1-7][0-7]?)')  # octal digits from 1 up to FF
 
@@ -283,16 +295,34 @@ def get_income_types(db: Session = Depends(get_db)):
   def repair(brokenjson):
     return invalid_escape.sub(replace_with_codepoint, brokenjson)
 
-  # TODO: in frontend i can use JSON.parse
-  clean_json = json.loads(repair(stocks['json'][0]))['data']
+  # # TODO: in frontend i can use JSON.parse
+  parsed_json = json.loads(repair(stock_w_data['json'][0]))
+  print(parsed_json['columns'])
+  clean_json = parsed_json['data']
+  print(clean_json[0])
+
+  def check_and_round(item):
+    if (item is None or isinstance(item, str)):
+      return 0
+    return round(float(item), 2)
+
   result = []
   print(clean_json)
   for stock in clean_json:
-    ticker = stock[1]
-    cost_basis = round(stock[2], 2)
-    shares = stock[3]
-    total_value = stock[4]
-    alloc = int(stock[5] * 100)
+    ticker = stock[0]
+
+    prevClose = check_and_round(stock[1])
+    dividendRate = check_and_round(stock[2])
+    prevDividendRate = check_and_round(stock[3])
+
+    print(prevClose)
+
+    cost_basis = stock[4]
+    shares = stock[5]
+    total_value = stock[6]
+    alloc = round(float(stock[7] * 100), 2)
+
+    # pyd = round(float(prevDividendRate), 2)
 
     res = {
       'investment_type': stock[0],  # join
@@ -301,48 +331,49 @@ def get_income_types(db: Session = Depends(get_db)):
       'cost_basis': cost_basis,  # weighted
       'total_value': total_value,
       'actual_allocation': alloc,  # total portfolio / (price_per_share)
-      'value_per_share': None,  # get from y finance
-      'value_change': None,  # yfinance
-      'est_total_quarter_dividend': None,  # yfinance
+      'value_per_share': prevClose,  # get from y finance
+      'value_change': prevClose - cost_basis,  # yfinance
+      'est_total_quarter_dividend': dividendRate * int(shares),  # yfinance
     }
 
     # TODO: Extract to function
-    try:
-      fin = Ticker(ticker).summary_detail[ticker]
-    except:
-      # print("Ticker not found", ticker)
-      pass
+    # try:
+    # fin = Ticker(ticker).summary_detail[ticker]
+    # except:
+    # print("Ticker not found", ticker)
+    # pass
 
-    try:
-      # This is returning a tuple in Json for some reason but not here
-      vps = round(float(fin['previousClose']), 2)
-      vc = round(float((fin['previousClose']) - float(cost_basis)) / 100, 2)
-    except:
-      # print("no PrevClose", ticker)
-      pass
-    try:
-      etd = round(float(fin['dividendRate']) * int(shares), 2)
-    except:
-      # print("no div", ticker)
-      pass
-    try:
-      pyd = round(float(fin['trailingAnnualDividendRate']), 2)
-    except:
-      pass
-      # print("no prev Div", ticker)
+    # try:
+    #   # This is returning a tuple in Json for some reason but not here
+    #   vps = round(float(fin['previousClose']), 2)
+    #   vc = round(float((fin['previousClose']) - float(cost_basis)), 2)
+    # except:
+    #   # print("no PrevClose", ticker)
+    #   pass
+    # try:
+    #   etd = round(float(fin['dividendRate']) * int(shares), 2)
+    # except:
+    #   # print("no div", ticker)
+    #   pass
+    # try:
+    #   pyd = round(float(fin['trailingAnnualDividendRate']), 2)
+    # except:
+    #   pass
+    #   # print("no prev Div", ticker)
 
-    if not isinstance(fin, str):
-      res['value_per_share'] = vps,
-      res['est_total_quarter_dividend'] = etd,
-      res['value_change'] = vc,
-      res['prev_year_dividend'] = pyd,
+    # if not isinstance(fin, str):
+    # res['value_per_share'] = vps,
+    # res['est_total_quarter_dividend'] = etd,
+    # res['value_change'] = vc,
+    # res['prev_year_dividend'] = pyd,
 
     result.append(res)
 
   return {
     "code": "success",
     "investments": result,
-    "doughnut": json.loads(repair(weight_json))['data']
+    "doughnut": json.loads(repair(weight_json))['data'],
+    "total_cost_basis": None
   }
 
 

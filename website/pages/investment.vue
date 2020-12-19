@@ -114,6 +114,7 @@ export default Vue.extend({
   data() {
     return {
       // selectedcategories: 'ETF',
+      fmt: new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}),
       categories: ['etf', 'stock', 'crypto', 'bonds'],
       // selectedaccount: 'TDA',
       accounts: [],
@@ -134,33 +135,25 @@ export default Vue.extend({
         // 'value_per_share',
         {
           key: 'value_per_share',
-          formatter: value => {
-            return value ? '$' + value : '-'
-          }
+          formatter: value => value ? this.fmt.format(value) : '-'
         },
         {
           key: 'value_change',
           formatter: value => {
-            return value ? value + '%' : '-'
+            return value ? value.toFixed(2) + '%' : '-'
           }
         },
         {
           key: 'cost_basis',
-          formatter: value => {
-            return value ? '$' + value : '-'
-          }
+          formatter: value => value ? this.fmt.format(value) : '-'
         },
         {
           key: 'est_total_quarter_dividend',
-          formatter: value => {
-            return value ? '$' + value : '-'
-          }
+          formatter: value => value ? this.fmt.format(value) : '-'
         },
         {
           key: 'total_value',
-          formatter: value => {
-            return value ? '$' + value : '-'
-          }
+          formatter: value => value ? this.fmt.format(value) : '-'
         },
         {
           key: 'actual_allocation',
@@ -168,9 +161,6 @@ export default Vue.extend({
             return value ? value + '%' : '-'
           }
         },
-        'est_total_quarter_dividend',
-        'total_value',
-        'actual_allocation'
       ],
       chartdata: {},
       items: [],
@@ -242,14 +232,7 @@ export default Vue.extend({
     async getInvestments() {
       let res = await this.$axios.$get('/investment')
 
-      let clean = []
-      res.investments.forEach((itm) => {
-        itm['value_per_share'] = itm['value_per_share'] ? itm['value_per_share'][0] : null
-        itm['est_total_quarter_dividend'] = itm['est_total_quarter_dividend'] ? itm['est_total_quarter_dividend'][0] : null
-        itm['value_change'] = itm['value_change'] ? itm['value_change'][0] : null
-        clean.push(itm)
-      })
-      this.items = clean
+      this.items = res.investments
 
       let doughnut = {
         labels: [],
