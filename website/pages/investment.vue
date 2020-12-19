@@ -35,13 +35,13 @@
     </div>
     <div class="row">
       <div class="col-4">
-<!--        <b-table-->
-<!--          hover-->
-<!--          :items="summary"-->
-<!--          :fields="categories"-->
-<!--          striped-->
-<!--          responsive="sm"-->
-<!--        ></b-table>-->
+        <!--        <b-table-->
+        <!--          hover-->
+        <!--          :items="summary"-->
+        <!--          :fields="categories"-->
+        <!--          striped-->
+        <!--          responsive="sm"-->
+        <!--        ></b-table>-->
         <h5>Investment Types</h5>
         <b-list-group>
           <b-list-group-item v-for="invest_type in investmentTypes">
@@ -65,8 +65,8 @@
           </b-list-group-item>
         </b-list-group>
       </div>
-      <div class="col-4">
-        <DoughnutChart />
+      <div class="col-4" v-if="loadChart">
+        <DoughnutChart :chartdata="chartdata" />
       </div>
     </div>
     <b-table
@@ -126,30 +126,54 @@ export default Vue.extend({
           bonds: '$100,843.00'
         }
       ],
+      loadChart: false,
       fields: [
         'investment_type',
         'ticker',
         'shares',
-        'value_per_share',
-        'value_change',
-        'cost_basis',
-        'prev_year_dividend	',
-        'est_total_dividend',
-        'actual_allocation',
-      ],
-      items: [
+        // 'value_per_share',
         {
-          category: 'ETF',
-          ticker: 'VTI',
-          valuePerShare: '$190.18',
-          shares: '2',
-          value_change: '+3%',
-          prev_year_dividend: '$0.74',
-          estDividend: '$10',
-          actual_allocation: '20%',
-          target_allocation: '50%'
-        }
+          key: 'value_per_share',
+          formatter: value => {
+            return value ? '$' + value : '-'
+          }
+        },
+        {
+          key: 'value_change',
+          formatter: value => {
+            return value ? value + '%' : '-'
+          }
+        },
+        {
+          key: 'cost_basis',
+          formatter: value => {
+            return value ? '$' + value : '-'
+          }
+        },
+        {
+          key: 'est_total_quarter_dividend',
+          formatter: value => {
+            return value ? '$' + value : '-'
+          }
+        },
+        {
+          key: 'total_value',
+          formatter: value => {
+            return value ? '$' + value : '-'
+          }
+        },
+        {
+          key: 'actual_allocation',
+          formatter: value => {
+            return value ? value + '%' : '-'
+          }
+        },
+        'est_total_quarter_dividend',
+        'total_value',
+        'actual_allocation'
       ],
+      chartdata: {},
+      items: [],
       fulltablefields: [
         'etf1',
         'etf2',
@@ -210,14 +234,58 @@ export default Vue.extend({
       let res = await this.$axios.$get('/investment/type')
       const investmentTypes = []
       res.investment_types.forEach(type => {
-        investmentTypes.push({ value: type.id, text: type.name})
+        investmentTypes.push({ value: type.id, text: type.name })
       })
       this.form.type_id = investmentTypes[0].value
       this.investmentTypes = investmentTypes
     },
     async getInvestments() {
       let res = await this.$axios.$get('/investment')
-      this.items=res.investments
+
+      let clean = []
+      res.investments.forEach((itm) => {
+        itm['value_per_share'] = itm['value_per_share'] ? itm['value_per_share'][0] : null
+        itm['est_total_quarter_dividend'] = itm['est_total_quarter_dividend'] ? itm['est_total_quarter_dividend'][0] : null
+        itm['value_change'] = itm['value_change'] ? itm['value_change'][0] : null
+        clean.push(itm)
+      })
+      this.items = clean
+
+      let doughnut = {
+        labels: [],
+        datasets: [
+          {
+            label: 'GitHub Commits',
+            backgroundColor: [
+              'rgba(255, 99, 132, 1)',
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(139,217,129, 1)',
+              'rgba(153, 102, 255, 1)',
+              'rgba(200,251,197, 1)',
+              'rgba(66, 179, 129, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(255, 138, 64, 1)',
+              'rgba(86, 85, 14, 1)',
+              'rgba(38,84,187, 1)',
+              'rgba(255, 138, 64, 1)',
+              'rgba(255, 138, 64, 1)',
+              'rgba(255, 138, 64, 1)',
+            ],
+            data: []
+          }
+        ]
+      }
+      // const doughnutjson = JSON.parse(res.doughnut)
+      // console.log(doughnutjson.length())
+      res.doughnut.forEach(part => {
+        doughnut.labels.push(part[0])
+        doughnut.datasets[0].data.push(part[1])
+      })
+      this.chartdata = doughnut
+      this.loadChart = true
+
+
     },
     async addInvestmentType() {
       await this.$axios.post('/investment/type', { name: this.new_investment_type })

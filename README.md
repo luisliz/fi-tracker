@@ -1,7 +1,10 @@
 # Financial Freedom Tracker
 An app for a very keeping track of your finances. From investments, to acounts to expenses. Track your way to financial Independence
 
-**warning**: This is a work in progress and is just being written with the intention of doing it as fast as possible as a weekend challenge
+**warnings**:
+- This is a work in progress and is just being written with the intention of doing it as fast as possible as a weekend challenge. 
+- Sorry for all the code repetition will fix later x)
+- I don't know much pandas would love tips in this area.  
 
 **P.D.** It's my first time using NuxtJS and FastAPI. Any improvements are welcome.
 ### Technologies

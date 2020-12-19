@@ -9,7 +9,6 @@ from models import AccountType, IncomeTypes, InvestmentTypes, ExpenseTypes, Budg
 
 from yahooquery import Ticker
 from yahoofinancials import YahooFinancials
-from yahoo_finance import Share
 import yfinance
 from sqlalchemy.orm import Session
 from fastapi import FastAPI, Request, Depends, BackgroundTasks
@@ -259,15 +258,20 @@ def get_income_types(db: Session = Depends(get_db)):
     w = group['shares']
     return (d * w).sum() / w.sum()
 
-  query = db.query(Investments, InvestmentTypes)
+  query = db.query(Investments, InvestmentTypes).filter(Investments.investment_type_id == InvestmentTypes.id)
   data = pd.read_sql(query.statement, db.bind)
-  ticker_list = pd.DataFrame(data)['ticker'].drop_duplicates().values.tolist()
+
   tickers = data.groupby(['name', 'ticker'])
   stocks = pd.concat([tickers.apply(wavg).reset_index(), tickers['shares'].sum().reset_index()], axis=1)
   stocks.rename(columns={0: 'cost_basis'}, inplace=True)
   stocks.rename(columns={'name': 'investment_type'}, inplace=True)
   stocks = stocks.loc[:, ~stocks.columns.duplicated()]
+  stocks['total'] = stocks.shares * stocks.cost_basis
+  stocks['percent'] = stocks.iloc[:, 4:].apply(lambda x: x / x.sum())
 
+  weight = stocks[['ticker', 'percent']]
+  weight = weight.loc[:, ~weight.columns.duplicated()]
+  weight_json = weight.to_json(orient='split')
 
   stocks['json'] = stocks.to_json(orient='split')
 
@@ -279,49 +283,66 @@ def get_income_types(db: Session = Depends(get_db)):
   def repair(brokenjson):
     return invalid_escape.sub(replace_with_codepoint, brokenjson)
 
+  # TODO: in frontend i can use JSON.parse
   clean_json = json.loads(repair(stocks['json'][0]))['data']
   result = []
-
+  print(clean_json)
   for stock in clean_json:
-
-    shares = stock[3]
     ticker = stock[1]
-    cost_basis = stock[2]
-    fin = Ticker(stock).summary_detail
+    cost_basis = round(stock[2], 2)
+    shares = stock[3]
+    total_value = stock[4]
+    alloc = int(stock[5] * 100)
+
     res = {
-          'investment_type': stock[0],  # join
-          'ticker': ticker,  # group by
-          'shares': shares,  # sum total
-          'cost_basis': cost_basis,  # weighted
-          'value_per_share': fin['previousClose'],  # get from y finance
-          'value_change': fin['previousClose'] - cost_basis,  # yfinance
-          'prev_year_dividend': fin['trailingAnnualDividendRate'],  # yfinance
-          'est_total_dividend': fin['dividendRate'] * shares,  # yfinance
-          #res['logo'] = fin['logo_url'],
-    
-    
-          'actual_allocation': 0,  # total portfolio / (price_per_share)
-        }
+      'investment_type': stock[0],  # join
+      'ticker': ticker,  # group by
+      'shares': shares,  # sum total
+      'cost_basis': cost_basis,  # weighted
+      'total_value': total_value,
+      'actual_allocation': alloc,  # total portfolio / (price_per_share)
+      'value_per_share': None,  # get from y finance
+      'value_change': None,  # yfinance
+      'est_total_quarter_dividend': None,  # yfinance
+    }
+
+    # TODO: Extract to function
+    try:
+      fin = Ticker(ticker).summary_detail[ticker]
+    except:
+      # print("Ticker not found", ticker)
+      pass
+
+    try:
+      # This is returning a tuple in Json for some reason but not here
+      vps = round(float(fin['previousClose']), 2)
+      vc = round(float((fin['previousClose']) - float(cost_basis)) / 100, 2)
+    except:
+      # print("no PrevClose", ticker)
+      pass
+    try:
+      etd = round(float(fin['dividendRate']) * int(shares), 2)
+    except:
+      # print("no div", ticker)
+      pass
+    try:
+      pyd = round(float(fin['trailingAnnualDividendRate']), 2)
+    except:
+      pass
+      # print("no prev Div", ticker)
+
+    if not isinstance(fin, str):
+      res['value_per_share'] = vps,
+      res['est_total_quarter_dividend'] = etd,
+      res['value_change'] = vc,
+      res['prev_year_dividend'] = pyd,
+
     result.append(res)
-    #res = {
-    #  'investment_type': stock[0],  # join
-    #  'ticker': ticker,  # group by
-    #  'shares': shares,  # sum total
-    #  'cost_basis': cost_basis,  # weighted
-    #  #'value_per_share': fin['previousClose'],  # get from y finance
-    #  #'value_change': fin['previousClose'] - cost_basis,  # yfinance
-    #  #'prev_year_dividend': fin['trailingAnnualDividendRate'],  # yfinance
-    #  #'est_total_dividend': fin['dividendRate'] * shares,  # yfinance
-    #  #res['logo'] = fin['logo_url'],
-
-
-    #  'actual_allocation': 0,  # total portfolio / (price_per_share)
-    #}
 
   return {
     "code": "success",
-    "investments": result
-    # "summary": summary
+    "investments": result,
+    "doughnut": json.loads(repair(weight_json))['data']
   }
 
 
