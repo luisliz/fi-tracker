@@ -13,6 +13,7 @@ An app for a very keeping track of your finances. From investments, to acounts t
 - SQLAlchemy
 
 ### Future Improvments 
+- [ ] Find a way to pay down liabilities just from expenses. Maybe a transfer feature will help this
 - [ ]  Moving api calls to separate files
 - [ ] Update & remove for all areas 
 - [ ] Settings for global variables

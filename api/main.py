@@ -65,6 +65,13 @@ class ExpensesRequest(BaseModel):
   budget_entry_id: int
   account_id: int
 
+class TransferRequest(BaseModel):
+  amount: float
+  expense_date: datetime
+  paid_to: str
+  budget_entry_id: int
+  account_id: int
+  to_account_id: int
 
 class InvestmentsRequest(BaseModel):
   investment_type_id: int
@@ -232,7 +239,7 @@ def get_investment_types(db: Session = Depends(get_db)):
 
 
 @app.post("/investment")
-def add_investment_type(investment_request: InvestmentsRequest, db: Session = Depends(get_db)):
+def add_investment_type(investment_request: InvestmentsRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
   investment = Investments()
   investment.investment_type_id = investment_request.investment_type_id
   investment.ticker = investment_request.ticker
@@ -240,6 +247,8 @@ def add_investment_type(investment_request: InvestmentsRequest, db: Session = De
   investment.price_per_share = investment_request.price_per_share
   investment.date = investment_request.date
   investment.investment_account_id = investment_request.investment_account_id
+
+  background_tasks.add_task(update_account_balance, investment.investment_account_id, investment.price_per_share*investment.shares, True, db)
 
   db.add(investment)
   db.commit()
@@ -249,6 +258,16 @@ def add_investment_type(investment_request: InvestmentsRequest, db: Session = De
     "message": "investment was added to the database"
   }
 
+
+def update_account_balance(acc_id, amount, isIncome, db: Session = Depends(get_db)):
+  account = db.query(Account).filter(Account.id == acc_id).first()
+
+  if isIncome:
+    account.starting_balance = float(account.starting_balance) + float(amount)
+  else:
+    account.starting_balance = float(account.starting_balance) - float(amount)
+
+  db.commit()
 
 # Income type category
 @app.get("/investment")
@@ -421,8 +440,9 @@ def add_income_type(income_type_request: IncomeTypeRequest, db: Session = Depend
 # Add Income
 @app.get("/income")
 def get_all_incomes(db: Session = Depends(get_db)):
-  incomes = db.query(Income, IncomeTypes, Account).filter(Income.income_type_id == IncomeTypes.id).filter(
-    Income.account_id == Account.id).all()
+  incomes = db.query(Income, IncomeTypes, Account) \
+    .filter(Income.income_type_id == IncomeTypes.id) \
+    .filter(Income.account_id == Account.id).all()
 
   clean_incomes = []
   for income in incomes:
@@ -444,20 +464,22 @@ def get_all_incomes(db: Session = Depends(get_db)):
 
 # get all incomes
 @app.post("/income")
-def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
+def add_income(income_request: IncomeRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
   income = Income()
   income.source = income_request.source
   income.amount = income_request.amount
   income.income_date = income_request.income_date
   income.taxes = income_request.taxes
   income.saved = income_request.saved
+  # add saved account_to
   income.income_type_id = income_request.income_type_id
   income.account_id = income_request.account_id
 
   db.add(income)
   db.commit()
 
-  #     background_tasks.add_task(fetch_stock_data, stock.id)
+  net_income = income.amount - income.taxes - income.saved
+  background_tasks.add_task(update_account_balance, income.account_id, net_income, True, db)
 
   return {
     "code": "success",
@@ -468,7 +490,7 @@ def add_income(income_request: IncomeRequest, db: Session = Depends(get_db)):
 # Add Expense -> change this to budget types or none
 @app.get("/budget/expense")
 def get_all_expenses(db: Session = Depends(get_db)):
-  expenses = db.query(Expenses, Account.name, Budget.name).all()
+  expenses = db.query(Expenses, Account.name, Budget.name).filter(Expenses.account_id==Account.id).all()
 
   clean_expenses = []
   for expense in expenses:
@@ -489,7 +511,8 @@ def get_all_expenses(db: Session = Depends(get_db)):
 
 
 @app.post("/budget/expense")
-def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db)):
+def add_expense(expense_request: ExpensesRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+  print("TEST")
   expense = Expenses()
   expense.amount = expense_request.amount
   expense.expense_date = expense_request.expense_date
@@ -500,11 +523,37 @@ def add_expense(expense_request: ExpensesRequest, db: Session = Depends(get_db))
   db.add(expense)
   db.commit()
 
-  #     background_tasks.add_task(fetch_stock_data, stock.id)
+  background_tasks.add_task(update_account_balance, expense.account_id, expense.amount, False, db)
 
   return {
     "code": "success",
     "message": "expense was added to the database"
+  }
+
+@app.post("/budget/transfer")
+def add_transfer(transfer_request: TransferRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+  expense = Expenses()
+  expense.amount = transfer_request.amount
+  expense.expense_date = transfer_request.expense_date
+  expense.paid_to = 'TRANSFER'
+  expense.budget_entry_id = transfer_request.budget_entry_id
+  expense.account_id = transfer_request.account_id
+
+  income = Income()
+  income.source = transfer_request.account_id
+  income.amount = transfer_request.amount
+  income.income_date = transfer_request.expense_date
+  income.account_id = transfer_request.to_account_id
+
+  db.add(expense)
+  db.add(income)
+
+  background_tasks.add_task(update_account_balance, transfer_request.account_id, transfer_request.amount, False, db)
+  background_tasks.add_task(update_account_balance, transfer_request.to_account_id, transfer_request.amount, True, db)
+
+  return {
+    "code": "success",
+    "message": "transfer done was added to the database"
   }
 
 
@@ -535,9 +584,13 @@ def get_all(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
 
 @app.post("/accounts")
 def create_account(account_request: AccountRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+  acc_type = db.query(AccountType).filter(AccountType.id==account_request.account_type_id).first().type
+
+  isAsset = (acc_type == 'asset')
+
   account = Account()
   account.name = account_request.name
-  account.starting_balance = account_request.balance
+  account.starting_balance = account_request.balance if isAsset else account_request.balance*(-1)
   account.account_type_id = account_request.account_type_id
 
   db.add(account)
@@ -547,7 +600,7 @@ def create_account(account_request: AccountRequest, background_tasks: Background
 
   return {
     "code": "success",
-    "message": "stock was added to the database"
+    "message": "account was added to the database"
   }
 
 

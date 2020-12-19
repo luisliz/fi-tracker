@@ -68,6 +68,10 @@
       <div class="col-4" v-if="loadChart">
         <DoughnutChart :chartdata="chartdata" />
       </div>
+      <div class="col-4">
+        Cost vs P&L
+        <StackedAreaChart />
+      </div>
     </div>
     <b-table
       hover
@@ -76,30 +80,30 @@
       striped
       responsive="sm"
     ></b-table>
-    <div class="row">
-      <div class="col-4">
-        Cost vs P&L
-        <StackedAreaChart />
-      </div>
-      <div class="col-4">
-        ETF P&L
-        <StackedAreaChart />
-      </div>
-      <div class="col-4">
-        Stock P&L
-        <StackedAreaChart />
-      </div>
-    </div>
-    <div>
-      <StackedLineChart />
-    </div>
-    <b-table
-      hover
-      :items="fulltableitems"
-      :fields="fulltablefields"
-      striped
-      responsive="sm"
-    ></b-table>
+    <!--    <div class="row">-->
+    <!--      <div class="col-4">-->
+    <!--        Cost vs P&L-->
+    <!--        <StackedAreaChart />-->
+    <!--      </div>-->
+    <!--      <div class="col-4">-->
+    <!--        ETF P&L-->
+    <!--        <StackedAreaChart />-->
+    <!--      </div>-->
+    <!--      <div class="col-4">-->
+    <!--        Stock P&L-->
+    <!--        <StackedAreaChart />-->
+    <!--      </div>-->
+    <!--    </div>-->
+    <!--    <div>-->
+    <!--      <StackedLineChart />-->
+    <!--    </div>-->
+    <!--    <b-table-->
+    <!--      hover-->
+    <!--      :items="fulltableitems"-->
+    <!--      :fields="fulltablefields"-->
+    <!--      striped-->
+    <!--      responsive="sm"-->
+    <!--    ></b-table>-->
   </div>
 </template>
 
@@ -114,7 +118,7 @@ export default Vue.extend({
   data() {
     return {
       // selectedcategories: 'ETF',
-      fmt: new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}),
+      fmt: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
       categories: ['etf', 'stock', 'crypto', 'bonds'],
       // selectedaccount: 'TDA',
       accounts: [],
@@ -160,7 +164,7 @@ export default Vue.extend({
           formatter: value => {
             return value ? value + '%' : '-'
           }
-        },
+        }
       ],
       chartdata: {},
       items: [],
@@ -253,7 +257,7 @@ export default Vue.extend({
               'rgba(38,84,187, 1)',
               'rgba(255, 138, 64, 1)',
               'rgba(255, 138, 64, 1)',
-              'rgba(255, 138, 64, 1)',
+              'rgba(255, 138, 64, 1)'
             ],
             data: []
           }
@@ -285,7 +289,8 @@ export default Vue.extend({
         'date': myDate,
         'investment_account_id': this.form.account_id
       }
-      console.log(investment)
+
+      this.loadChart = false
       await this.$axios.post('/investment', investment)
       this.getInvestments()
     }
