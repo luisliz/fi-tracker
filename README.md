@@ -1,7 +1,7 @@
 # Financial Freedom Tracker
 An app for a very keeping track of your finances. From investments, to acounts to expenses. Track your way to financial Independence
 
-[![FI Tracker Demo](http://i.imgur.com/Ot5DWAW.png)](https://youtu.be/StTqXEQ2l-Y?t=35s "FI Tracker Demo")
+[![FI Tracker Demo](https://i.imgur.com/OL87LBM.png)](https://youtu.be/QxpgIOthmqE "FI Tracker Demo")
 
 **warnings**:
 - This is a work in progress and is just being written with the intention of doing it as fast as possible as a weekend challenge. 
