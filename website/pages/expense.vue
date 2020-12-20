@@ -1,80 +1,69 @@
 <template>
-  <div>
-    <h5>Add Expense</h5>
+  <div class="m-3">
+    <h3>Expense</h3>
     <div class="row">
-      <div>
-        <b-form-datepicker id="example-datepicker" v-model="form.date" class="mb-2"></b-form-datepicker>
+      <div class="col-9">
+        <b-table hover :items="items" :fields="fields" striped responsive="sm">
+          <template #cell(show_details)="row">
+            <b-button size="sm" @click="row.toggleDetails" class="mr-2">
+              {{ row.detailsShowing ? 'Hide' : 'Show' }} Details
+            </b-button>
+
+            <!-- As `row.showDetails` is one-way, we call the toggleDetails function on @change -->
+          </template>
+
+          <template #row-details="row">
+            <b-card>
+              <b-row class="mb-2">
+                <b-col sm="3" class="text-sm-right"><b>Budget:</b></b-col>
+                <b-col>{{ row.item.budget }}</b-col>
+              </b-row>
+
+              <b-row class="mb-2">
+                <b-col sm="3" class="text-sm-right"><b>Year Average:</b></b-col>
+                <b-col>{{ row.item.year_average }}</b-col>
+              </b-row>
+              <b-row class="mb-2">
+                <b-col sm="3" class="text-sm-right"><b>Annual:</b></b-col>
+                <b-col>{{ row.item.annual }}</b-col>
+              </b-row>
+              <b-row class="mb-2">
+                <b-col sm="3" class="text-sm-right"><b>Savings:</b></b-col>
+                <b-col>{{ row.item.savings }}</b-col>
+              </b-row>
+            </b-card>
+          </template>
+        </b-table>
       </div>
-      <div>
-        <b-form-select v-model="form.budget_id" :options="budget_categories"></b-form-select>
-      </div>
-      <div>
-        <b-form-select v-model="form.account_id" :options="asset_accounts"></b-form-select>
-      </div>
-      <div>
-        <b-form-input v-model="form.paid_to" placeholder="Paid To"></b-form-input>
-      </div>
-      <div>
-        <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
-      </div>
-      <div>
-        <b-button variant="primary" @click="addExpense">Add</b-button>
+      <div class="col-3">
+        <h5>Add Expense</h5>
+        <div class="pb-2 ">
+          <b-form-group label="Paid To:">
+            <b-form-input v-model="form.paid_to" placeholder="Paid To"></b-form-input>
+          </b-form-group>
+          <b-form-group label="Expense Date:">
+            <b-form-datepicker id="example-datepicker" v-model="form.date" class="mb-2"></b-form-datepicker>
+          </b-form-group>
+          <b-form-group label="Budget Category:">
+            <b-form-select v-model="form.budget_id" :options="budget_categories"></b-form-select>
+          </b-form-group>
+          <b-form-group label="From Account:">
+            <b-form-select v-model="form.account_id" :options="asset_accounts"></b-form-select>
+          </b-form-group>
+          <b-form-group label="Amount:">
+            <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
+          </b-form-group>
+          <b-button variant="outline-success" block @click="addExpense">Add</b-button>
+        </div>
+        <h6>Transfer Expense</h6>
+        <div>
+          <b-form-group label="To Acc:">
+            <b-form-select v-model="form.to_account_id" :options="all_accounts"></b-form-select>
+          </b-form-group>
+          <b-button variant="outline-success" block @click="addTransfer">Transfer</b-button>
+        </div>
       </div>
     </div>
-    <h5>Transfer Expense</h5>
-    <div class="row">
-      <div>
-        <b-form-datepicker id="example-datepicker" v-model="form.date" class="mb-2"></b-form-datepicker>
-      </div>
-      <div>
-        <b-form-select v-model="form.budget_id" :options="budget_categories"></b-form-select>
-      </div>
-      <div>
-        from
-        <b-form-select v-model="form.account_id" :options="asset_accounts"></b-form-select>
-      </div>
-      <div>
-        to
-        <b-form-select v-model="form.to_account_id" :options="all_accounts"></b-form-select>
-      </div>
-      <div>
-        <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
-      </div>
-      <div>
-        <b-button variant="primary" @click="addTransfer">Transfer</b-button>
-      </div>
-    </div>
-    <b-table hover :items="items" :fields="fields" striped responsive="sm">
-      <template #cell(show_details)="row">
-        <b-button size="sm" @click="row.toggleDetails" class="mr-2">
-          {{ row.detailsShowing ? 'Hide' : 'Show' }} Details
-        </b-button>
-
-        <!-- As `row.showDetails` is one-way, we call the toggleDetails function on @change -->
-      </template>
-
-      <template #row-details="row">
-        <b-card>
-          <b-row class="mb-2">
-            <b-col sm="3" class="text-sm-right"><b>Budget:</b></b-col>
-            <b-col>{{ row.item.budget }}</b-col>
-          </b-row>
-
-          <b-row class="mb-2">
-            <b-col sm="3" class="text-sm-right"><b>Year Average:</b></b-col>
-            <b-col>{{ row.item.year_average }}</b-col>
-          </b-row>
-          <b-row class="mb-2">
-            <b-col sm="3" class="text-sm-right"><b>Annual:</b></b-col>
-            <b-col>{{ row.item.annual }}</b-col>
-          </b-row>
-          <b-row class="mb-2">
-            <b-col sm="3" class="text-sm-right"><b>Savings:</b></b-col>
-            <b-col>{{ row.item.savings }}</b-col>
-          </b-row>
-        </b-card>
-      </template>
-    </b-table>
 
   </div>
 </template>
@@ -91,7 +80,7 @@ export default Vue.extend({
         account_id: null,
         to_account_id: null,
         paid_to: '',
-        amount: null,
+        amount: null
       },
       budget_categories: [],
       expenses: [],
@@ -148,7 +137,7 @@ export default Vue.extend({
         'expense_date': myDate,
         'paid_to': this.form.paid_to,
         'budget_entry_id': this.form.budget_id ? this.form.budget_id : null,
-        'account_id': this.form.account_id,
+        'account_id': this.form.account_id
       }
       await this.$axios.post('/budget/expense', expense)
       this.getExpenses()
@@ -161,12 +150,12 @@ export default Vue.extend({
         'paid_to': 'TRANSFER',
         'budget_entry_id': this.form.budget_id,
         'account_id': this.form.account_id,
-        'to_account_id': this.form.to_account_id,
+        'to_account_id': this.form.to_account_id
       }
 
       await this.$axios.post('/budget/transfer', transfer)
       this.getExpenses()
-    },
+    }
   }
 
 })

@@ -1,109 +1,128 @@
 <template>
   <div>
-    <div class="row">
-      <div>
-        <b-form-datepicker
-          id="example-datepicker"
-          v-model="form.date"
-          class="mb-2"
-        ></b-form-datepicker>
-      </div>
-      <div>
-        <b-form-input v-model="form.ticker" placeholder="Ticker"></b-form-input>
-      </div>
-      <div>
-        <b-form-input v-model="form.shares" placeholder="# of Shares"></b-form-input>
-      </div>
-      <div>
-        <b-form-select
-          v-model="form.account_id"
-          :options="accounts"
-        ></b-form-select>
-      </div>
-      <div>
-        <b-form-input v-model="form.price_per_share" placeholder="Cost Basis"></b-form-input>
-      </div>
-      <div>
-        <b-form-select
-          v-model="form.type_id"
-          :options="investmentTypes"
-        ></b-form-select>
-      </div>
-      <div>
-        <b-button variant="primary" @click="addInvestment">Add</b-button>
-      </div>
+    <div class="m-3">
+      <h3>✨Investments✨</h3>
+
+      <b-row>
+        <b-col v-if="loadChart">
+          <DoughnutChart :chartdata="chartdata" />
+        </b-col>
+
+        <!--        <b-col>
+                  Cost vs P&L
+                  <StackedAreaChart />
+        <b-col>-->
+
+
+        <!--   <div class="row">
+             <div class="col-4">
+               Cost vs P&L
+               <StackedAreaChart />
+             </div>
+             <div class="col-4">
+               ETF P&L
+               <StackedAreaChart />
+             </div>
+             <div class="col-4">
+               Stock P&L
+               <StackedAreaChart />
+             </div>
+           </div>
+           <div>
+             <StackedLineChart />
+           </div>
+           <b-table
+             hover
+             :items="fulltableitems"
+             :fields="fulltablefields"
+             striped
+             responsive="sm"
+           ></b-table>-->
+
+        <b-col>
+          <h5>Investment Types</h5>
+          <b-row>
+            <b-col>
+              <b-form-group label="Date:">
+                <b-form-datepicker v-model="form.date"></b-form-datepicker>
+              </b-form-group>
+            </b-col>
+            <b-col>
+              <b-form-group label="Ticker:">
+                <b-form-input v-model="form.ticker" placeholder="Ticker"></b-form-input>
+              </b-form-group>
+            </b-col>
+          </b-row>
+          <b-row>
+            <b-col>
+              <b-form-group label="Shares:">
+                <b-form-input v-model="form.shares" placeholder="# of Shares"></b-form-input>
+              </b-form-group>
+            </b-col>
+            <b-col>
+              <b-form-group label="Price:">
+                <b-form-input v-model="form.price_per_share" placeholder="Price per share"></b-form-input>
+              </b-form-group>
+            </b-col>
+          </b-row>
+          <b-row>
+            <b-col>
+              <b-form-group label="Account:">
+                <b-form-select v-model="form.account_id" :options="accounts"
+                ></b-form-select>
+              </b-form-group>
+            </b-col>
+            <b-col>
+              <b-form-group label="Investment Type:">
+                <b-form-select v-model="form.type_id" :options="investmentTypes"
+                ></b-form-select>
+              </b-form-group>
+            </b-col>
+          </b-row>
+          <b-button variant="outline-success" block @click="addInvestment">Add</b-button>
+        </b-col>
+        <b-col>
+          <!--       <b-table
+                   hover
+                   :items="summary"
+                   :fields="categories"
+                   striped
+                   responsive="sm"
+                 ></b-table>-->
+          <h5>Investment Types</h5>
+          <b-list-group>
+            <b-list-group-item v-for="invest_type in investmentTypes">
+              <b-row>
+                <b-col>
+                  {{ invest_type.text }}
+                </b-col>
+              </b-row>
+            </b-list-group-item>
+            <b-list-group-item>
+              <b-form inline>
+                <b-form-input
+                  id="input-1"
+                  type="text"
+                  v-model="new_investment_type"
+                  placeholder="Enter new category"
+                  required
+                ></b-form-input>
+                <b-button @click="addInvestmentType">Add</b-button>
+              </b-form>
+            </b-list-group-item>
+          </b-list-group>
+        </b-col>
+      </b-row>
+      <b-table
+        hover
+        :items="items"
+        :fields="fields"
+        striped
+        responsive="sm"
+      ></b-table>
+
     </div>
-    <div class="row">
-      <div class="col-4">
-        <!--        <b-table-->
-        <!--          hover-->
-        <!--          :items="summary"-->
-        <!--          :fields="categories"-->
-        <!--          striped-->
-        <!--          responsive="sm"-->
-        <!--        ></b-table>-->
-        <h5>Investment Types</h5>
-        <b-list-group>
-          <b-list-group-item v-for="invest_type in investmentTypes">
-            <b-row>
-              <b-col>
-                {{ invest_type.text }}
-              </b-col>
-            </b-row>
-          </b-list-group-item>
-          <b-list-group-item>
-            <b-form inline>
-              <b-form-input
-                id="input-1"
-                type="text"
-                v-model="new_investment_type"
-                placeholder="Enter new category"
-                required
-              ></b-form-input>
-              <b-button @click="addInvestmentType">Add</b-button>
-            </b-form>
-          </b-list-group-item>
-        </b-list-group>
-      </div>
-      <div class="col-4" v-if="loadChart">
-        <DoughnutChart :chartdata="chartdata" />
-      </div>
-      <div class="col-4">
-        Cost vs P&L
-        <StackedAreaChart />
-      </div>
-    </div>
-    <b-table
-      hover
-      :items="items"
-      :fields="fields"
-      striped
-      responsive="sm"
-    ></b-table>
-    <!--    <div class="row">-->
-    <!--      <div class="col-4">-->
-    <!--        Cost vs P&L-->
-    <!--        <StackedAreaChart />-->
-    <!--      </div>-->
-    <!--      <div class="col-4">-->
-    <!--        ETF P&L-->
-    <!--        <StackedAreaChart />-->
-    <!--      </div>-->
-    <!--      <div class="col-4">-->
-    <!--        Stock P&L-->
-    <!--        <StackedAreaChart />-->
-    <!--      </div>-->
-    <!--    </div>-->
-    <!--    <div>-->
-    <!--      <StackedLineChart />-->
-    <!--    </div>-->
-    <!--    <b-table-->
-    <!--      hover-->
-    <!--      :items="fulltableitems"-->
-    <!--      :fields="fulltablefields"-->
-    <!--      striped-->
-    <!--      responsive="sm"-->
-    <!--    ></b-table>-->
+
   </div>
 </template>
 

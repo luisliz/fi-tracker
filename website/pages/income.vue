@@ -1,27 +1,7 @@
 <template>
   <div class="row m-3">
     <div class="col-9">
-      <div class="row">
-        <div>
-          <b-form-datepicker v-model="form.date" id="example-datepicker" class="mb-2"></b-form-datepicker>
-        </div>
-        <div>
-          <b-form-select v-model="form.income_id" :options="incomes"></b-form-select>
-        </div>
-        <div>
-          <b-form-input v-model="form.source" placeholder="Source"></b-form-input>
-        </div>
-        <div>
-          <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
-        </div>
-        <div>
-          <b-form-select v-model="form.account" :options="accounts"></b-form-select>
-        </div>
-        <div>
-          <b-button variant="primary" @click="addIncome">Add</b-button>
-        </div>
-      </div>
-
+      <h3 class="row">Income</h3>
       <b-table hover :items="items" :fields="fields" striped responsive="sm">
         <template #cell(show_details)="row">
           <b-button size="sm" @click="row.toggleDetails" class="mr-2">
@@ -59,29 +39,50 @@
         </template>
       </b-table>
     </div>
-    <div class="col-3">
-      <h5>Income Types</h5>
-      <b-list-group>
-        <b-list-group-item v-for="income in incomes">
-          <b-row>
-            <b-col>
-              {{ income.text }}
-            </b-col>
-          </b-row>
-        </b-list-group-item>
-        <b-list-group-item>
-          <b-form inline>
-            <b-form-input
-              id="input-1"
-              type="text"
-              v-model="newIncomeType"
-              placeholder="Enter new category"
-              required
-            ></b-form-input>
-            <b-button @click="addIncomeType">Add</b-button>
-          </b-form>
-        </b-list-group-item>
-      </b-list-group>
+    <div class="col-3 border-left">
+      <b-col class="pb-2">
+        <h5>New Income</h5>
+        <b-form-group label="Income Date:">
+          <b-form-datepicker v-model="form.date" id="example-datepicker" class="mb-2"></b-form-datepicker>
+        </b-form-group>
+        <b-form-group label="Type:">
+          <b-form-select v-model="form.income_id" :options="incomes"></b-form-select>
+        </b-form-group>
+        <b-form-group label="Source:">
+          <b-form-input v-model="form.source" placeholder="Source"></b-form-input>
+        </b-form-group>
+        <b-form-group label="Amount:">
+          <b-form-input v-model="form.amount" placeholder="Amount"></b-form-input>
+        </b-form-group>
+        <b-form-group label="Receiving Account:">
+          <b-form-select v-model="form.account" :options="accounts"></b-form-select>
+        </b-form-group>
+        <b-button variant="outline-success" block @click="addIncome">Add</b-button>
+      </b-col>
+      <b-col class="pt-2 border-top">
+        <h5>Income Types</h5>
+        <b-list-group>
+          <b-list-group-item v-for="income in incomes">
+            <b-row>
+              <b-col>
+                {{ income.text }}
+              </b-col>
+            </b-row>
+          </b-list-group-item>
+          <b-list-group-item>
+            <b-form inline>
+              <b-form-input
+                id="input-1"
+                type="text"
+                v-model="newIncomeType"
+                placeholder="Enter new category"
+                required
+              ></b-form-input>
+              <b-button @click="addIncomeType">Add</b-button>
+            </b-form>
+          </b-list-group-item>
+        </b-list-group>
+      </b-col>
     </div>
   </div>
 </template>
@@ -137,7 +138,7 @@ export default Vue.extend({
       this.items = res.incomes
     },
     async addIncome() {
-      const myDate =  this.$moment(new Date(this.form.date)).format("YYYY-MM-DD HH:mm:ss");
+      const myDate = this.$moment(new Date(this.form.date)).format('YYYY-MM-DD HH:mm:ss')
       const income = {
         'source': this.form.source,
         'amount': this.form.amount,

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Expense />
+    <h3>Financial Overview</h3>
     <div class="row">
       <div class="col-4">
         <b-table
@@ -31,29 +31,36 @@
         ></b-table>
       </div>
       <div class="col-4">
-        <div>
-          Expenses Covered
-          <DoughnutChart />
+        <div v-if="loadednwdough">
+          <b-col>
+            <b-row>
+              <h4 class="font-weight-light text-center vw-100">Net Worth:</h4>
+            </b-row>
+            <b-row>
+              <h5 class="font-weight-bolder text-center vw-100">{{ networth }}</h5>
+            </b-row>
+          </b-col>
+          <DoughnutChart :chartdata="networthdata" />
         </div>
-        <div>
-          Expenses Covered
-          <DoughnutChart />
-        </div>
+        <!--        <div>-->
+        <!--          Expenses Covered-->
+        <!--          <DoughnutChart />-->
+        <!--        </div>-->
         <div>
         </div>
       </div>
 
     </div>
-    <div class="row">
-      <div class="col-6">
-        Net Worth
-        <StackedAreaChart />
-      </div>
-      <div class="col-6">
-        Cash Flow
-        <StackedAreaChart />
-      </div>
-    </div>
+    <!--    <div class="row">-->
+    <!--      <div class="col-6">-->
+    <!--        Net Worth-->
+    <!--        <StackedAreaChart />-->
+    <!--      </div>-->
+    <!--      <div class="col-6">-->
+    <!--        Cash Flow-->
+    <!--        <StackedAreaChart />-->
+    <!--      </div>-->
+    <!--    </div>-->
   </div>
 </template>
 
@@ -66,6 +73,7 @@ export default Vue.extend({
   components: { StackedAreaChart, DoughnutChart },
   data() {
     return {
+      fmt: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
       fields: ['label', 'percent'],
       goals: [
         { label: 'Growth', percent: 10, max: '' },
@@ -96,7 +104,36 @@ export default Vue.extend({
         ['Total Net Worth', '59305'],
         ['Total Net Worth Hourly Increase', '59'],
         ['Total Net Worth Hourly Wage', '59']
-      ]
+      ],
+      networth: '',
+      networthdata: {},
+      loadednwdough: false
+    }
+  },
+  mounted() {
+    this.getNetWorthData()
+  },
+  methods: {
+    async getNetWorthData() {
+      const nw = await this.$axios.$get('/networth')
+
+      this.networthdata = {
+        labels: Object.keys(nw.allocation),
+        datasets: [
+          {
+            label: 'GitHub Commits',
+            backgroundColor: [
+              'rgb(64,130,174)',
+              'rgb(103,10,29)',
+              'rgb(58,126,11)'
+            ],
+            data: Object.values(nw.allocation)
+          }
+        ]
+      }
+
+      this.networth = this.fmt.format(nw.total)
+      this.loadednwdough = true
 
     }
   }

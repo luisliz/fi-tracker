@@ -1,6 +1,6 @@
 <template>
   <div class="mx-4 my-2">
-
+    <h3>Accounts</h3>
     <b-row>
       <b-col>
         <b-row>
