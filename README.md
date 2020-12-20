@@ -16,6 +16,7 @@ An app for a very keeping track of your finances. From investments, to acounts t
 
 ### Future Improvments 
 - [ ] Find a way to pay down liabilities just from expenses. Maybe a transfer feature will help this
+- [ ] Update balances and track over time. 
 - [ ]  Moving api calls to separate files
 - [ ] Update & remove for all areas 
 - [ ] Settings for global variables
@@ -23,7 +24,7 @@ An app for a very keeping track of your finances. From investments, to acounts t
 - [ ]  Better structure for api
 - [ ]  User login (not priority)
 - [ ]  Some type of auto budget feature
-- [ ] "Should I purchase this?" area
+- [ ] "Should I purchase this?" area -> a finance simulator 
 
 ### Done 
 - [x] Add Accounts with balance
